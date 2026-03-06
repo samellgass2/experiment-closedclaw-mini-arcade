@@ -288,6 +288,58 @@ export function rearrangeDashboardTiles(state, fromIndex, toIndex) {
   });
 }
 
+export function repositionDashboardTile(state, tileId, insertionIndex) {
+  if (typeof tileId !== "string" || tileId.length === 0) {
+    state.lastAction = {
+      status: DASHBOARD_STATUS.ERROR,
+      message: "Unable to move tile because its identifier is missing."
+    };
+    return createResult(false, state, "invalid-tile-id");
+  }
+
+  const sourceIndex = state.tileIds.indexOf(tileId);
+  if (sourceIndex < 0) {
+    state.lastAction = {
+      status: DASHBOARD_STATUS.ERROR,
+      message: "Unable to move tile because it is not on the dashboard."
+    };
+    return createResult(false, state, "tile-not-found");
+  }
+
+  const normalizedInsertion = Number.isFinite(insertionIndex) ? Math.floor(insertionIndex) : -1;
+  if (normalizedInsertion < 0 || normalizedInsertion > state.tileIds.length) {
+    state.lastAction = {
+      status: DASHBOARD_STATUS.ERROR,
+      message: "Unable to move tile to the requested position."
+    };
+    return createResult(false, state, "out-of-range");
+  }
+
+  const adjustedDestination = normalizedInsertion > sourceIndex ? normalizedInsertion - 1 : normalizedInsertion;
+  if (adjustedDestination === sourceIndex) {
+    state.lastAction = {
+      status: DASHBOARD_STATUS.IDLE,
+      message: "Tile order unchanged."
+    };
+    return createResult(false, state, "no-op");
+  }
+
+  const [removedTileId] = state.tileIds.splice(sourceIndex, 1);
+  state.tileIds.splice(adjustedDestination, 0, removedTileId);
+
+  const movedGame = findCatalogGame(state, removedTileId);
+  state.lastAction = {
+    status: DASHBOARD_STATUS.SUCCESS,
+    message: `${movedGame ? movedGame.name : "Tile"} moved to position ${adjustedDestination + 1}.`
+  };
+
+  return createResult(true, state, "tile-moved", {
+    tileId: removedTileId,
+    fromIndex: sourceIndex,
+    toIndex: adjustedDestination
+  });
+}
+
 export function moveDashboardTile(state, tileId, direction) {
   const currentIndex = state.tileIds.indexOf(tileId);
   if (currentIndex < 0) {

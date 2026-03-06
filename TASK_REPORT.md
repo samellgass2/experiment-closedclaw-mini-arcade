@@ -1,45 +1,31 @@
-# Task Report: TASK_ID 142 (RUN_ID 228)
+# Task Report: TASK_ID 160 (RUN_ID 255)
 
 ## Summary
-Developed a dedicated game tile component for the dashboard that displays each game name and current score, and added score update plumbing so tile scores can be updated live.
+Updated `STATUS.md` to document the latest dashboard user interface enhancements delivered in Tasks `157`-`159`, including layout refinements, readability improvements, and interaction feedback cues.
 
 ## Changes
-- Added new tile component module: `js/dashboard/gameTile.js`
-  - `createGameTileElement(game, index, tileCount)` renders a full game tile with:
-    - game name
-    - game description and metadata
-    - `Current Score` display
-    - tile controls (move left/right, remove)
-  - `updateGameTileElementScore(tileElement, score)` updates the score view in-place.
-- Extended dashboard state logic: `js/dashboard/logic.js`
-  - added per-game score map (`scoresByTileId`)
-  - added `initialScores` support in `createDashboardState`
-  - added `updateDashboardTileScore(state, tileId, score)`
-  - updated `getDashboardSnapshot` tiles to include `score`
-- Refactored dashboard UI: `js/dashboard/component.js`
-  - switched tile rendering to use `createGameTileElement`
-  - added `setGameScore(tileId, score)` API to update score and status
-  - returns `setGameScore` from `createDashboardComponent`
-- Updated exports: `js/dashboard/index.js`
-  - now exports the new game tile module
-- Updated app bootstrap: `js/game.js`
-  - `window.__MINI_ARCADE_DASHBOARD__` now exposes `setGameScore`
-- Updated dashboard styles: `css/styles.css`
-  - added `.tile-score` and `.tile-score-value` styling
-- Expanded tests: `tests/dashboard.logic.test.mjs`
-  - validates score defaults in snapshots
-  - validates successful score updates and error behavior for missing tiles
+- Updated `STATUS.md`:
+  - added `## Task 160 Update (RUN_ID 255)` section
+  - documented dashboard UI layout and drag/drop insertion-slot improvements from Task `157`
+  - documented tile game-name/score visibility and responsive readability improvements from Task `158`
+  - documented interaction feedback stream, pulse/highlight cues, and reduced-motion behavior from Task `159`
+  - included updated file list, verification results, and acceptance mapping
 
 ## Verification
 Executed:
 - `node --test tests/*.mjs`
-- `node --check js/dashboard/logic.js && node --check js/dashboard/component.js && node --check js/dashboard/gameTile.js && node --check js/game.js`
 
 Results:
-- PASS: all tests passed
-- PASS: syntax checks passed
+- PASS: `tests/anomaly.logic.test.mjs`
+- PASS: `tests/clicker.logic.test.mjs`
+- PASS: `tests/color-match.logic.test.mjs`
+- PASS: `tests/dashboard.logic.test.mjs`
+- PASS: `tests/racing.controls.test.mjs`
+- PASS: `tests/racing.logic.test.mjs`
+- PASS: `tests/storage.score.test.mjs`
 
 ## Acceptance Coverage
-- Each game tile displays game name: PASS (rendered via `createGameTileElement`, title in `.tile-title`)
-- Each game tile displays current score: PASS (rendered in `.tile-score-value` from snapshot score)
-- Score updates are reflected: PASS (`setGameScore` -> `updateDashboardTileScore` -> tile DOM update/snapshot update)
+- `STATUS.md` reflects latest UI enhancements: PASS
+  - new Task 160 section captures the full dashboard UI enhancement set from Tasks `157`-`159`
+- `STATUS.md` formatting is correct: PASS
+  - content follows existing status structure with implementation summary, verification, and acceptance mapping

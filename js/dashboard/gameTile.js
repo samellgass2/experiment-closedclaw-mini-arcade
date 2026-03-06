@@ -17,18 +17,48 @@ function normalizeScore(score) {
   return Math.max(0, Math.floor(parsed));
 }
 
-export function createGameTileElement(game, index, tileCount) {
-  const item = createNode("li", "dashboard-tile");
-  item.dataset.tileId = game.id;
-  item.dataset.position = String(index);
-  item.dataset.score = String(normalizeScore(game.score));
-  item.draggable = true;
+function normalizeLabel(value, fallback) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
 
-  const heading = createNode("h3", "tile-title", game.name);
-  const summary = createNode("p", "tile-summary", game.description);
-  const meta = createNode("p", "tile-meta", `${game.mode} | ${game.difficulty}`);
-  const score = createNode("p", "tile-score");
-  score.innerHTML = `Current Score: <strong class="tile-score-value">${item.dataset.score}</strong>`;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function formatScore(score) {
+  return normalizeScore(score).toLocaleString("en-US");
+}
+
+export function createGameTileElement(game, index, tileCount) {
+  const gameName = normalizeLabel(game?.name, "Unknown Game");
+  const gameDescription = normalizeLabel(game?.description, "No game description available.");
+  const gameMode = normalizeLabel(game?.mode, "Arcade");
+  const gameDifficulty = normalizeLabel(game?.difficulty, "Unknown");
+  const normalizedScore = normalizeScore(game?.score);
+
+  const item = createNode("li", "dashboard-tile");
+  item.dataset.tileId = game?.id ?? "";
+  item.dataset.position = String(index);
+  item.dataset.score = String(normalizedScore);
+  item.dataset.gameName = gameName;
+  item.draggable = true;
+  item.setAttribute("aria-label", `${gameName} tile with current score ${formatScore(normalizedScore)}`);
+
+  const headingRow = createNode("div", "tile-heading-row");
+  const heading = createNode("h3", "tile-title", gameName);
+  const position = createNode("p", "tile-position", `Slot ${index + 1} of ${tileCount}`);
+  const scoreBadge = createNode("p", "tile-score-badge", `Score ${formatScore(normalizedScore)}`);
+  headingRow.append(heading, scoreBadge, position);
+
+  const score = createNode("p", "tile-score", "Current Score");
+  const scoreValue = createNode("strong", "tile-score-value", formatScore(normalizedScore));
+  score.append(scoreValue);
+
+  const summary = createNode("p", "tile-summary", gameDescription);
+  const meta = createNode("p", "tile-meta", `${gameMode} | ${gameDifficulty}`);
+
+  const dragHint = createNode("p", "tile-drag-hint", "Drag tile to a drop slot to rearrange.");
 
   const controls = createNode("div", "tile-controls");
 
@@ -36,21 +66,21 @@ export function createGameTileElement(game, index, tileCount) {
   moveLeftButton.type = "button";
   moveLeftButton.dataset.action = "move-left";
   moveLeftButton.disabled = index === 0;
-  moveLeftButton.setAttribute("aria-label", `Move ${game.name} tile left`);
+  moveLeftButton.setAttribute("aria-label", `Move ${gameName} tile left`);
 
   const moveRightButton = createNode("button", "tile-button tile-button-secondary", "Move Right");
   moveRightButton.type = "button";
   moveRightButton.dataset.action = "move-right";
   moveRightButton.disabled = index === tileCount - 1;
-  moveRightButton.setAttribute("aria-label", `Move ${game.name} tile right`);
+  moveRightButton.setAttribute("aria-label", `Move ${gameName} tile right`);
 
   const removeButton = createNode("button", "tile-button tile-button-danger", "Remove");
   removeButton.type = "button";
   removeButton.dataset.action = "remove";
-  removeButton.setAttribute("aria-label", `Remove ${game.name} tile from dashboard`);
+  removeButton.setAttribute("aria-label", `Remove ${gameName} tile from dashboard`);
 
   controls.append(moveLeftButton, moveRightButton, removeButton);
-  item.append(heading, summary, meta, score, controls);
+  item.append(headingRow, summary, meta, dragHint, score, controls);
   return item;
 }
 
@@ -60,12 +90,21 @@ export function updateGameTileElementScore(tileElement, score) {
   }
 
   const normalizedScore = normalizeScore(score);
+  const formattedScore = formatScore(normalizedScore);
   tileElement.dataset.score = String(normalizedScore);
   const value = tileElement.querySelector(".tile-score-value");
+  const badge = tileElement.querySelector(".tile-score-badge");
+  const gameName = normalizeLabel(tileElement.dataset.gameName, "Unknown Game");
+
+  tileElement.setAttribute("aria-label", `${gameName} tile with current score ${formattedScore}`);
+
   if (value instanceof HTMLElement) {
-    value.textContent = String(normalizedScore);
-    return true;
+    value.textContent = formattedScore;
   }
 
-  return false;
+  if (badge instanceof HTMLElement) {
+    badge.textContent = `Score ${formattedScore}`;
+  }
+
+  return value instanceof HTMLElement || badge instanceof HTMLElement;
 }
