@@ -10,6 +10,9 @@ import {
 } from "./logic.js";
 import { createGameTileElement, updateGameTileElementScore } from "./gameTile.js";
 
+const FEEDBACK_LIMIT = 4;
+const FEEDBACK_RESET_MS = 780;
+
 function createNode(tagName, className, textContent = "") {
   const node = document.createElement(tagName);
   if (className) {
@@ -89,6 +92,12 @@ function clearDropTargetStyles(tileList) {
   highlightedTargets.forEach((slot) => slot.classList.remove("is-drop-target"));
 }
 
+function createFeedbackItem(message, tone) {
+  const item = createNode("li", `dashboard-feedback-item is-${tone}`);
+  item.textContent = message;
+  return item;
+}
+
 function createShell(root) {
   root.innerHTML = "";
 
@@ -127,8 +136,19 @@ function createShell(root) {
   const status = createNode("p", "dashboard-status is-idle", "");
   status.id = "dashboardStatus";
   status.setAttribute("aria-live", "polite");
+  status.setAttribute("role", "status");
 
-  controlsPanel.append(controlsTitle, controlsHelp, toolbar, status);
+  const feedbackTray = createNode("section", "dashboard-feedback-tray");
+  feedbackTray.setAttribute("aria-label", "Recent interaction feedback");
+
+  const feedbackTitle = createNode("h3", "dashboard-feedback-title", "Recent Actions");
+  const feedbackList = createNode("ul", "dashboard-feedback-list");
+  feedbackList.id = "dashboardFeedbackList";
+  feedbackList.setAttribute("aria-live", "polite");
+  feedbackList.setAttribute("aria-relevant", "additions");
+  feedbackTray.append(feedbackTitle, feedbackList);
+
+  controlsPanel.append(controlsTitle, controlsHelp, toolbar, status, feedbackTray);
 
   const boardPanel = createNode("section", "dashboard-panel dashboard-board-panel");
   boardPanel.setAttribute("aria-label", "Active game tiles");
@@ -158,8 +178,10 @@ function createShell(root) {
     addButton,
     select,
     status,
+    feedbackList,
     tileList,
-    boardCount
+    boardCount,
+    boardPanel
   };
 }
 
@@ -173,6 +195,7 @@ export function createDashboardComponent(options = {}) {
 
   const ui = createShell(root);
   let dragTileId = null;
+  let feedbackTimeoutId = null;
 
   function notifyChange() {
     if (typeof options.onChange === "function") {
@@ -203,6 +226,89 @@ export function createDashboardComponent(options = {}) {
     return snapshot;
   }
 
+  function pushFeedbackMessage(message, tone) {
+    const normalizedTone = tone === "error" ? "error" : tone === "success" ? "success" : "neutral";
+    const item = createFeedbackItem(message, normalizedTone);
+    ui.feedbackList.prepend(item);
+
+    while (ui.feedbackList.childElementCount > FEEDBACK_LIMIT) {
+      const last = ui.feedbackList.lastElementChild;
+      if (!last) {
+        break;
+      }
+      last.remove();
+    }
+  }
+
+  function pulseElement(element, className) {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+  }
+
+  function clearTransientFeedbackStyles() {
+    ui.status.classList.remove("is-feedback-success", "is-feedback-error", "is-feedback-neutral");
+    ui.boardPanel.classList.remove("is-feedback-add", "is-feedback-remove", "is-feedback-move");
+    const highlightedTiles = ui.tileList.querySelectorAll(
+      ".dashboard-tile.is-feedback-added, .dashboard-tile.is-feedback-moved, .dashboard-tile.is-feedback-score"
+    );
+    highlightedTiles.forEach((tile) =>
+      tile.classList.remove("is-feedback-added", "is-feedback-moved", "is-feedback-score")
+    );
+  }
+
+  function scheduleFeedbackReset() {
+    if (feedbackTimeoutId) {
+      window.clearTimeout(feedbackTimeoutId);
+    }
+    feedbackTimeoutId = window.setTimeout(() => {
+      clearTransientFeedbackStyles();
+      feedbackTimeoutId = null;
+    }, FEEDBACK_RESET_MS);
+  }
+
+  function applyTileFeedback(tileId, className) {
+    if (typeof tileId !== "string" || tileId.length === 0) {
+      return;
+    }
+    const tile = ui.tileList.querySelector(`.dashboard-tile[data-tile-id="${tileId}"]`);
+    if (!(tile instanceof HTMLElement)) {
+      return;
+    }
+    pulseElement(tile, className);
+  }
+
+  function commitActionFeedback(result, options = {}) {
+    const snapshot = render();
+    const tone =
+      snapshot.lastAction.status === DASHBOARD_STATUS.ERROR
+        ? "error"
+        : snapshot.lastAction.status === DASHBOARD_STATUS.SUCCESS
+          ? "success"
+          : "neutral";
+
+    pushFeedbackMessage(snapshot.lastAction.message, tone);
+
+    const statusFeedbackClass =
+      tone === "error" ? "is-feedback-error" : tone === "success" ? "is-feedback-success" : "is-feedback-neutral";
+    pulseElement(ui.status, statusFeedbackClass);
+
+    if (typeof options.boardFeedbackClass === "string") {
+      pulseElement(ui.boardPanel, options.boardFeedbackClass);
+    }
+
+    if (result.accepted && typeof options.tileFeedbackClass === "string") {
+      applyTileFeedback(result.tileId, options.tileFeedbackClass);
+    }
+
+    scheduleFeedbackReset();
+    return result;
+  }
+
   function resolveTileIdFromDrop(event) {
     return (event.dataTransfer && event.dataTransfer.getData("text/plain")) || dragTileId || "";
   }
@@ -217,8 +323,11 @@ export function createDashboardComponent(options = {}) {
 
   function handleAdd() {
     const tileId = ui.select.value;
-    addDashboardTile(state, tileId);
-    render();
+    const result = addDashboardTile(state, tileId);
+    commitActionFeedback(result, {
+      boardFeedbackClass: "is-feedback-add",
+      tileFeedbackClass: "is-feedback-added"
+    });
   }
 
   function handleTileAction(event) {
@@ -244,20 +353,28 @@ export function createDashboardComponent(options = {}) {
 
     const action = button.dataset.action;
     if (action === "remove") {
-      removeDashboardTile(state, tileId);
-      render();
+      const result = removeDashboardTile(state, tileId);
+      commitActionFeedback(result, {
+        boardFeedbackClass: "is-feedback-remove"
+      });
       return;
     }
 
     if (action === "move-left") {
-      moveDashboardTile(state, tileId, "left");
-      render();
+      const result = moveDashboardTile(state, tileId, "left");
+      commitActionFeedback(result, {
+        boardFeedbackClass: "is-feedback-move",
+        tileFeedbackClass: "is-feedback-moved"
+      });
       return;
     }
 
     if (action === "move-right") {
-      moveDashboardTile(state, tileId, "right");
-      render();
+      const result = moveDashboardTile(state, tileId, "right");
+      commitActionFeedback(result, {
+        boardFeedbackClass: "is-feedback-move",
+        tileFeedbackClass: "is-feedback-moved"
+      });
     }
   }
 
@@ -343,18 +460,24 @@ export function createDashboardComponent(options = {}) {
     const slot = target.closest(".dashboard-drop-slot");
     if (slot instanceof HTMLElement && typeof slot.dataset.insertIndex === "string") {
       const insertIndex = Number.parseInt(slot.dataset.insertIndex, 10);
-      repositionDashboardTile(state, sourceTileId, insertIndex);
+      const result = repositionDashboardTile(state, sourceTileId, insertIndex);
       clearDragStyles();
-      render();
+      commitActionFeedback(result, {
+        boardFeedbackClass: "is-feedback-move",
+        tileFeedbackClass: "is-feedback-moved"
+      });
       return;
     }
 
     const dropTile = target.closest(".dashboard-tile");
     if (dropTile instanceof HTMLElement && typeof dropTile.dataset.position === "string") {
       const insertIndex = Number.parseInt(dropTile.dataset.position, 10);
-      repositionDashboardTile(state, sourceTileId, insertIndex);
+      const result = repositionDashboardTile(state, sourceTileId, insertIndex);
       clearDragStyles();
-      render();
+      commitActionFeedback(result, {
+        boardFeedbackClass: "is-feedback-move",
+        tileFeedbackClass: "is-feedback-moved"
+      });
       return;
     }
 
@@ -377,10 +500,16 @@ export function createDashboardComponent(options = {}) {
 
     const tile = ui.tileList.querySelector(`.dashboard-tile[data-tile-id="${tileId}"]`);
     if (!(tile instanceof HTMLElement) || !updateGameTileElementScore(tile, result.score)) {
-      render();
+      commitActionFeedback(result, {
+        tileFeedbackClass: "is-feedback-score"
+      });
       return result;
     }
 
+    pushFeedbackMessage(snapshot.lastAction.message, "success");
+    pulseElement(ui.status, "is-feedback-success");
+    applyTileFeedback(tileId, "is-feedback-score");
+    scheduleFeedbackReset();
     notifyChange();
     return result;
   }

@@ -1,39 +1,41 @@
-# Task Report: TASK_ID 158 (RUN_ID 248)
+# Task Report: TASK_ID 159 (RUN_ID 251)
 
 ## Summary
-Enhanced dashboard game tile readability so each tile clearly shows both the game name and current score at all times.
+Implemented richer visual feedback on dashboard interactions so users get immediate confirmation when tiles are added, removed, moved, or score-updated.
 
 ## Changes
-- Updated tile rendering in `js/dashboard/gameTile.js`:
-  - added robust text normalization fallbacks for missing/blank game fields
-  - added `data-game-name` and improved tile `aria-label` content
-  - introduced a high-visibility score badge in the tile header (`.tile-score-badge`)
-  - upgraded score block formatting to emphasize numeric value
-  - ensured score updates refresh both score value and score badge text
-- Updated styles in `css/styles.css`:
-  - increased tile minimum height and spacing for clearer hierarchy
-  - redesigned tile header into a grid layout for title, score badge, and slot position
-  - increased contrast and font weight for game name and score text
-  - improved score card styling and numeric prominence
-  - added mobile-specific header layout adjustments to keep name/score readable on narrow screens
+- Updated `js/dashboard/component.js`:
+  - added a "Recent Actions" feedback stream (`dashboard-feedback-list`) with tone-aware entries
+  - introduced unified `commitActionFeedback(...)` flow so add/remove/move/drop actions all trigger consistent UI feedback
+  - added status pulse feedback classes for success/error/neutral outcomes
+  - added board-level feedback pulses for add/remove/move actions
+  - added per-tile highlight feedback for added/moved/score-updated tiles
+  - preserved existing dashboard behavior and state update flow
+- Updated `css/styles.css`:
+  - added styling for feedback tray/list entries
+  - added animations for status pulse, board pulse, and tile interaction cues
+  - added reduced-motion support to disable animations when user preference requests it
 
 ## Verification
 Executed:
-- `for f in tests/*.mjs; do node "$f" || exit 1; done`
+- `node --test tests/*.mjs`
 
 Results:
-- PASS: `anomaly.logic.test.mjs`
-- PASS: `clicker.logic.test.mjs`
-- PASS: `color-match.logic.test.mjs`
-- PASS: `dashboard.logic.test.mjs`
-- PASS: `racing.controls.test.mjs`
-- PASS: `racing.logic.test.mjs`
-- PASS: `storage.score.test.mjs`
+- PASS: `tests/anomaly.logic.test.mjs`
+- PASS: `tests/clicker.logic.test.mjs`
+- PASS: `tests/color-match.logic.test.mjs`
+- PASS: `tests/dashboard.logic.test.mjs`
+- PASS: `tests/racing.controls.test.mjs`
+- PASS: `tests/racing.logic.test.mjs`
+- PASS: `tests/storage.score.test.mjs`
 
 ## Acceptance Coverage
-- Game tile visibility: PASS
-  - tile title has stronger contrast/weight and layout priority
-  - score is now shown in two clear locations (header badge + score row)
-- Required tile information display: PASS
-  - each tile continues to include game name and current score, with fallback-safe rendering
-  - score updates in the component keep displayed values synchronized
+- Add tile feedback: PASS
+  - successful add now pulses status + board and highlights the added tile
+  - add outcomes are logged in the Recent Actions stream
+- Remove tile feedback: PASS
+  - successful remove now pulses status + board and logs action in Recent Actions
+- Move/reorder tile feedback: PASS
+  - move-left/move-right/drag-drop reposition now pulse status + board and highlight moved tile
+- Error/neutral interaction feedback: PASS
+  - invalid/no-op actions now produce visibly distinct status pulses and Recent Actions entries
