@@ -371,3 +371,38 @@ Documented the latest anomaly detection game progress snapshot in this status fi
 ### Overall Workflow Verdict
 - PASS
 - Rationale: The branch contains a browser-based anomaly detection game with dataset-driven outlier detection, interactive UI, and persistent score tracking; implementation is supported by code inspection and passing logic tests.
+
+## Task 108 Update (RUN_ID 187)
+Implemented clicker game core logic and wired runtime click input to score tracking.
+
+### Logic Added
+- Added clicker state machine module:
+  - `js/clicker/logic.js`
+  - Handles statuses (`READY`, `RUNNING`, `PAUSED`, `OVER`), click registration, score updates, combo streaks, timers, and best-score persistence.
+- Added clicker exports for easier imports:
+  - `js/clicker/index.js`
+  - `js/clicker.js`
+
+### Runtime Integration
+- Replaced main entrypoint behavior in `js/game.js` to run a clicker loop:
+  - Pointer input on game canvas calls click registration.
+  - Score, clicks, combo, best score, and timer are reflected in HUD.
+  - Supports start, pause/resume, restart controls (`Enter`, `P`, `R`).
+  - Round auto-ends on timer expiry and reports final score.
+- Updated copy in `index.html` from anomaly wording to clicker wording while reusing existing HUD/layout shell.
+
+### Tests Added
+- `tests/clicker.logic.test.mjs`
+  - Validates click-driven scoring.
+  - Validates combo scoring behavior.
+  - Validates pause/resume and rejected click scenarios.
+  - Validates timeout/end-state and reset behavior.
+
+### Verification (Task 108)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`

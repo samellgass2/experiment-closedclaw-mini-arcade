@@ -1,225 +1,268 @@
-import { BASE_CONFIG, GAME_STATE } from "./anomaly/constants.js";
 import {
-  createGameState,
-  resetRunState,
-  applyCorrectSelection,
-  applyWrongSelection,
-  applyRoundTimeout,
-  updateBestScore
-} from "./anomaly/state.js";
-import { createGridLayout, locateCellAt } from "./anomaly/components/grid.js";
-import { generateRoundGrid } from "./anomaly/components/anomalyGenerator.js";
-import { evaluateSelectedCell } from "./anomaly/components/anomalyEvaluator.js";
-import { createTimer, startTimer, pauseTimer, tickTimer } from "./anomaly/components/timer.js";
-import { createUIBindings, updateHUD, showOverlay, hideOverlay } from "./anomaly/ui.js";
-import { renderGameFrame } from "./anomaly/renderer.js";
+  CLICKER_STATUS,
+  createClickerState,
+  startClickerGame,
+  pauseClickerGame,
+  resumeClickerGame,
+  tickClickerGame,
+  registerClick,
+  getClickerSnapshot,
+  finishClickerGame
+} from "./clicker/logic.js";
 
-const ui = createUIBindings();
-const state = createGameState();
-const timer = createTimer();
+function queryRequiredElement(id) {
+  const node = document.getElementById(id);
 
-let animationFrame = 0;
+  if (!node) {
+    throw new Error(`Missing required DOM node: ${id}`);
+  }
 
-const layout = createGridLayout(
-  BASE_CONFIG.rows,
-  BASE_CONFIG.cols,
-  BASE_CONFIG.canvasSize,
-  BASE_CONFIG.canvasSize,
-  BASE_CONFIG.tileGap
-);
-
-function createRound() {
-  state.selectedCellId = null;
-  state.activeGrid = generateRoundGrid(state.currentRound, layout, BASE_CONFIG);
-  state.roundEvent = `Round ${state.debug.roundsPlayed + 1}: find the record that deviates from baseline.`;
-  updateHUD(ui, state);
+  return node;
 }
 
-function setStatus(nextStatus) {
-  state.status = nextStatus;
-  updateHUD(ui, state);
+function createUIBindings() {
+  return {
+    canvas: queryRequiredElement("gameCanvas"),
+    overlay: queryRequiredElement("overlay"),
+    overlayTitle: queryRequiredElement("overlayTitle"),
+    overlayMessage: queryRequiredElement("overlayMessage"),
+    startButton: queryRequiredElement("startButton"),
+    scoreValue: queryRequiredElement("scoreValue"),
+    bestScoreValue: queryRequiredElement("bestScoreValue"),
+    livesValue: queryRequiredElement("livesValue"),
+    levelValue: queryRequiredElement("levelValue"),
+    timeValue: queryRequiredElement("timeValue"),
+    statusValue: queryRequiredElement("statusValue"),
+    eventFeedValue: queryRequiredElement("eventFeedValue"),
+    selectedCellLabel: queryRequiredElement("selectedCellLabel"),
+    selectedTemperatureValue: queryRequiredElement("selectedTemperatureValue"),
+    selectedLatencyValue: queryRequiredElement("selectedLatencyValue"),
+    selectedErrorRateValue: queryRequiredElement("selectedErrorRateValue"),
+    deviationTemperatureValue: queryRequiredElement("deviationTemperatureValue"),
+    deviationLatencyValue: queryRequiredElement("deviationLatencyValue"),
+    deviationErrorRateValue: queryRequiredElement("deviationErrorRateValue"),
+    selectionVerdictValue: queryRequiredElement("selectionVerdictValue")
+  };
 }
 
-function startNewRun() {
-  resetRunState(state);
-  createRound();
-  setStatus(GAME_STATE.RUNNING);
-  hideOverlay(ui);
-  startTimer(timer, performance.now());
+function formatSeconds(remainingMs) {
+  return String(Math.max(0, Math.ceil(remainingMs / 1000)));
 }
 
-function pauseToggle() {
-  if (state.status === GAME_STATE.RUNNING) {
-    setStatus(GAME_STATE.PAUSED);
-    state.roundEvent = "Run paused. Resume to continue searching for the anomaly.";
-    pauseTimer(timer);
-    updateHUD(ui, state);
-    showOverlay(ui, "Paused", "Press P to resume or R to restart.", "Resume");
+function renderOverlay(ui, title, message, actionLabel) {
+  ui.overlayTitle.textContent = title;
+  ui.overlayMessage.textContent = message;
+  ui.startButton.textContent = actionLabel;
+  ui.overlay.classList.add("visible");
+}
+
+function hideOverlay(ui) {
+  ui.overlay.classList.remove("visible");
+}
+
+function updateReadoutCards(ui, snapshot, clickResult = null) {
+  ui.selectedCellLabel.textContent = `Total clicks: ${snapshot.totalClicks}`;
+  ui.selectedTemperatureValue.textContent = String(snapshot.score);
+  ui.selectedLatencyValue.textContent = String(snapshot.comboStreak);
+  ui.selectedErrorRateValue.textContent = String(snapshot.highestCombo);
+
+  ui.deviationTemperatureValue.textContent = clickResult ? `+${clickResult.pointsAwarded}` : "--";
+  ui.deviationLatencyValue.textContent = `Clicks: ${snapshot.totalClicks}`;
+  ui.deviationErrorRateValue.textContent = `Best combo: ${snapshot.highestCombo}`;
+
+  if (!clickResult) {
+    ui.selectionVerdictValue.textContent = "Awaiting click";
+    ui.selectionVerdictValue.classList.remove("is-correct", "is-wrong");
+    ui.selectionVerdictValue.classList.add("is-pending");
     return;
   }
 
-  if (state.status === GAME_STATE.PAUSED) {
-    setStatus(GAME_STATE.RUNNING);
-    state.roundEvent = "Run resumed. Locate the anomalous dataset record.";
-    updateHUD(ui, state);
-    hideOverlay(ui);
-    startTimer(timer, performance.now());
+  if (clickResult.accepted) {
+    ui.selectionVerdictValue.textContent = `Click accepted (+${clickResult.pointsAwarded})`;
+    ui.selectionVerdictValue.classList.remove("is-pending", "is-wrong");
+    ui.selectionVerdictValue.classList.add("is-correct");
+    return;
   }
+
+  ui.selectionVerdictValue.textContent = "Click ignored (game not running)";
+  ui.selectionVerdictValue.classList.remove("is-pending", "is-correct");
+  ui.selectionVerdictValue.classList.add("is-wrong");
 }
 
-function endRun() {
-  pauseTimer(timer);
-  setStatus(GAME_STATE.OVER);
-  updateBestScore(state);
-  state.roundEvent = `Run complete. Final score ${state.score}, best score ${state.bestScore}.`;
-  updateHUD(ui, state);
+function updateHUD(ui, state, clickResult = null) {
+  const snapshot = getClickerSnapshot(state);
 
-  showOverlay(
+  ui.scoreValue.textContent = String(snapshot.score);
+  ui.bestScoreValue.textContent = String(snapshot.bestScore);
+  ui.livesValue.textContent = String(snapshot.totalClicks);
+  ui.levelValue.textContent = String(snapshot.highestCombo);
+  ui.timeValue.textContent = formatSeconds(snapshot.remainingMs);
+  ui.statusValue.textContent = state.status;
+
+  if (state.status === CLICKER_STATUS.READY) {
+    ui.eventFeedValue.textContent = "Ready. Start the round or click the board to auto-start.";
+  } else if (state.status === CLICKER_STATUS.RUNNING) {
+    ui.eventFeedValue.textContent = `Keep clicking. Combo streak: ${snapshot.comboStreak}.`;
+  } else if (state.status === CLICKER_STATUS.PAUSED) {
+    ui.eventFeedValue.textContent = "Paused. Press P or Start to resume.";
+  } else {
+    ui.eventFeedValue.textContent = `Round complete (${snapshot.finalReason ?? "finished"}). Final score: ${snapshot.score}.`;
+  }
+
+  updateReadoutCards(ui, snapshot, clickResult);
+}
+
+function drawClickTarget(canvas) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return;
+  }
+
+  const width = canvas.width;
+  const height = canvas.height;
+
+  ctx.clearRect(0, 0, width, height);
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, "#0f172a");
+  gradient.addColorStop(1, "#1d4ed8");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.globalAlpha = 0.14;
+  for (let i = 0; i < 8; i += 1) {
+    const radius = 16 + i * 14;
+    ctx.beginPath();
+    ctx.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "#f8fafc";
+  ctx.font = "700 42px system-ui";
+  ctx.textAlign = "center";
+  ctx.fillText("CLICK", width / 2, height / 2 - 10);
+  ctx.font = "500 18px system-ui";
+  ctx.fillText("Tap anywhere in this board", width / 2, height / 2 + 24);
+}
+
+const ui = createUIBindings();
+const state = createClickerState({
+  roundDurationMs: 30000,
+  pointsPerClick: 1,
+  comboWindowMs: 750,
+  comboBonusCap: 5,
+  autoStartOnClick: true,
+  bestScoreStorageKey: "mini-arcade-clicker-best"
+});
+
+let animationFrame = 0;
+
+function beginRound(now) {
+  startClickerGame(state, now);
+  hideOverlay(ui);
+  updateHUD(ui, state);
+}
+
+function endRound(now, reason) {
+  finishClickerGame(state, now, reason);
+  updateHUD(ui, state);
+  renderOverlay(
     ui,
-    "Run Complete",
-    `Final score: ${state.score}. Press restart to play again.`,
+    "Round Complete",
+    `Final score ${state.score}. Best ${state.bestScore}. Click restart for another run.`,
     "Restart"
   );
 }
 
-function applyRoundSuccess() {
-  applyCorrectSelection(state);
-  createRound();
-}
+function handleCanvasClick() {
+  const now = performance.now();
+  const clickResult = registerClick(state, now);
+  updateHUD(ui, state, clickResult);
 
-function applyRoundFailure() {
-  applyWrongSelection(state);
-
-  if (state.lives <= 0) {
-    endRun();
+  if (state.status === CLICKER_STATUS.OVER) {
+    endRound(now, state.finalReason ?? "time-expired");
   }
-
-  updateHUD(ui, state);
 }
 
-function handleTimeout() {
-  applyRoundTimeout(state);
-
-  if (state.lives <= 0) {
-    endRun();
+function handleStartButton() {
+  if (state.status === CLICKER_STATUS.RUNNING) {
     return;
   }
 
-  createRound();
-}
-
-function processSelection(pointerX, pointerY) {
-  if (state.status !== GAME_STATE.RUNNING || !state.activeGrid) {
+  if (state.status === CLICKER_STATUS.PAUSED) {
+    resumeClickerGame(state, performance.now());
+    hideOverlay(ui);
+    updateHUD(ui, state);
     return;
   }
 
-  const selectedCell = locateCellAt(layout, pointerX, pointerY);
-  if (!selectedCell) {
-    return;
-  }
-
-  state.selectedCellId = selectedCell.id;
-
-  const evaluation = evaluateSelectedCell(state.activeGrid, selectedCell.id, BASE_CONFIG.dataset);
-  const selectedRecord = state.activeGrid.recordsByCellId[selectedCell.id];
-  state.lastSelection = {
-    cellId: selectedCell.id,
-    row: selectedCell.row,
-    col: selectedCell.col,
-    record: selectedRecord,
-    profile: evaluation.profile,
-    isAnomaly: evaluation.isAnomaly
-  };
-
-  if (evaluation.isAnomaly) {
-    applyRoundSuccess();
-    return;
-  }
-
-  applyRoundFailure();
+  beginRound(performance.now());
 }
 
-function onCanvasPointerDown(event) {
-  const rect = ui.canvas.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / rect.width) * ui.canvas.width;
-  const y = ((event.clientY - rect.top) / rect.height) * ui.canvas.height;
-
-  processSelection(x, y);
-}
-
-function onStartButton() {
-  if (state.status === GAME_STATE.PAUSED) {
-    pauseToggle();
-    return;
-  }
-
-  startNewRun();
-}
-
-function onKeyDown(event) {
+function handleKeyDown(event) {
   if (event.code === "Enter") {
     event.preventDefault();
-
-    if (state.status === GAME_STATE.PAUSED) {
-      pauseToggle();
-      return;
-    }
-
-    if (state.status !== GAME_STATE.RUNNING) {
-      startNewRun();
-    }
-
+    handleStartButton();
     return;
   }
 
   if (event.code === "KeyP") {
     event.preventDefault();
-    pauseToggle();
+
+    if (state.status === CLICKER_STATUS.RUNNING) {
+      pauseClickerGame(state);
+      updateHUD(ui, state);
+      renderOverlay(ui, "Paused", "Press P or Start to continue.", "Resume");
+      return;
+    }
+
+    if (state.status === CLICKER_STATUS.PAUSED) {
+      resumeClickerGame(state, performance.now());
+      hideOverlay(ui);
+      updateHUD(ui, state);
+    }
+
     return;
   }
 
   if (event.code === "KeyR") {
     event.preventDefault();
-    startNewRun();
+    endRound(performance.now(), "manual-stop");
   }
 }
 
-function tick(now) {
-  tickTimer(timer, now, () => {
-    state.remainingSeconds -= 1;
+function gameLoop(now) {
+  tickClickerGame(state, now);
 
-    if (state.remainingSeconds <= 0) {
-      handleTimeout();
-      return;
-    }
-
+  if (state.status === CLICKER_STATUS.OVER) {
+    endRound(now, state.finalReason ?? "time-expired");
+  } else {
     updateHUD(ui, state);
-  });
+  }
 
-  renderGameFrame(ui.ctx, ui.canvas, state);
-  animationFrame = window.requestAnimationFrame(tick);
+  animationFrame = window.requestAnimationFrame(gameLoop);
 }
 
 function initialize() {
-  ui.canvas.width = BASE_CONFIG.canvasSize;
-  ui.canvas.height = BASE_CONFIG.canvasSize;
+  ui.canvas.width = 640;
+  ui.canvas.height = 640;
+  drawClickTarget(ui.canvas);
 
-  createRound();
-  setStatus(GAME_STATE.READY);
-  showOverlay(
+  renderOverlay(
     ui,
-    "Anomaly Detector",
-    "Click start and find the outlier record each round. Wrong picks cost lives and time.",
+    "Clicker Challenge",
+    "Score as many points as possible before time expires. Each click increases score.",
     "Start Game"
   );
-  state.roundEvent = "Ready. Press Start Game to begin anomaly detection.";
+
   updateHUD(ui, state);
 
-  ui.canvas.addEventListener("pointerdown", onCanvasPointerDown);
-  ui.startButton.addEventListener("click", onStartButton);
-  window.addEventListener("keydown", onKeyDown);
+  ui.canvas.addEventListener("pointerdown", handleCanvasClick);
+  ui.startButton.addEventListener("click", handleStartButton);
+  window.addEventListener("keydown", handleKeyDown);
 
-  animationFrame = window.requestAnimationFrame(tick);
+  animationFrame = window.requestAnimationFrame(gameLoop);
 }
 
 window.addEventListener("beforeunload", () => {
