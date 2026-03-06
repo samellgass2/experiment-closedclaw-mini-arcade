@@ -1,62 +1,40 @@
-# Task Report: TASK_ID 143 (RUN_ID 230)
+# Task Report: TASK_ID 144 (RUN_ID 231)
 
 ## Summary
-Integrated a Flappy Bird-like game into the dashboard so it runs directly in-browser inside a game tile and reports live score updates to the dashboard tile score.
+Updated `STATUS.md` to document the current integration progress for the "Integrate Games with Dashboard" workflow and to list completed integration tasks.
 
-## Changes
-- Added new Flappy game module:
-  - `js/flappy/logic.js`
-    - Introduced Flappy game state/config model (`createFlappyConfig`, `createFlappyState`).
-    - Implemented core gameplay loop operations (`startFlappyGame`, `flapBird`, `stepFlappyGame`, `resetFlappyState`).
-    - Added pipe spawning, movement, collision detection, score increments, and best-score persistence.
-    - Added snapshot helper (`getFlappySnapshot`).
-  - `js/flappy/index.js`
-    - Implemented browser widget mounting for dashboard tiles (`createFlappyGameWidget`).
-    - Added canvas renderer (sky/background, pipes, bird, overlays).
-    - Added player input handling via keyboard (`Space`, `ArrowUp`) and pointer/tap.
-    - Added requestAnimationFrame loop for smooth animation and continuous simulation.
-    - Wired score events to parent callback for dashboard score syncing.
-  - `js/flappy.js`
-    - Added barrel export for flappy module.
-
-- Integrated Flappy tile into dashboard:
-  - `js/dashboard/logic.js`
-    - Added new catalog game entry:
-      - `id: "flappy"`
-      - `name: "Cloud Hopper"`
-  - `js/dashboard/component.js`
-    - Added Flappy widget mounting lifecycle for `flappy` tiles.
-    - Added controller teardown/remount handling on dashboard rerenders.
-    - Connected Flappy score callback to existing `setGameScore` dashboard API.
-  - `js/game.js`
-    - Added `flappy` to default initial dashboard tile IDs.
-
-- Added styles for embedded Flappy widget:
-  - `css/styles.css`
-    - Added `.tile-game-host`, `.flappy-shell`, `.flappy-canvas`, `.flappy-panel`, `.flappy-stat`.
-
-- Updated and expanded tests:
-  - `tests/dashboard.logic.test.mjs`
-    - Updated expectations for expanded default catalog size.
-  - `tests/flappy.logic.test.mjs` (new)
-    - Verifies flap-to-start behavior.
-    - Verifies score increments when a pipe is passed.
-    - Verifies collision transitions game to OVER.
-    - Verifies reset clears run state.
+## What Was Updated
+- Updated project workflow label in `STATUS.md`:
+  - From `Implement Top-Down Racing Game`
+  - To `Integrate Games with Dashboard`
+- Added a new section:
+  - `## Task 144 Update (RUN_ID 231)`
+- Documented current integration state:
+  - Dashboard bootstrapping as default app shell.
+  - Current catalog composition including `flappy`.
+  - Tile lifecycle capabilities (add/remove/rearrange).
+  - Score-aware tile behavior and score propagation flow.
+  - Embedded Flappy widget integration and score synchronization.
+- Added explicit completed-task list for integration workflow:
+  - Task 141 (dashboard component)
+  - Task 142 (score-aware game tiles)
+  - Task 143 (Flappy dashboard integration)
+  - Task 144 (status update)
+- Added fresh verification evidence and acceptance mapping under Task 144 section.
 
 ## Verification
 Executed:
+- `ls -1 Makefile package.json package-lock.json 2>/dev/null || true`
 - `for f in tests/*.mjs; do echo "==> $f"; node "$f"; done`
-- `node --check js/game.js && node --check js/dashboard/component.js && node --check js/dashboard/logic.js && node --check js/flappy/logic.js && node --check js/flappy/index.js`
+- `node --check js/game.js && node --check js/dashboard/logic.js && node --check js/dashboard/component.js && node --check js/dashboard/gameTile.js && node --check js/flappy/logic.js && node --check js/flappy/index.js`
 
 Results:
-- PASS: all test files completed successfully, including new `flappy.logic.test.mjs`.
-- PASS: syntax checks completed for updated/new modules.
+- PASS: Repository has no package/Makefile script manifest at root (expected for this project layout).
+- PASS: All test files in `tests/*.mjs` succeeded.
+- PASS: Syntax checks succeeded for dashboard and flappy integration modules.
 
 ## Acceptance Coverage
-- Game runs smoothly in browser:
-  - PASS: Flappy game uses `requestAnimationFrame` continuous loop and per-frame simulation in `createFlappyGameWidget`.
-- Game accepts user input:
-  - PASS: Keyboard (`Space`, `ArrowUp`) and pointer/tap input trigger flap/start behavior.
-- Game tracks score correctly:
-  - PASS: Score increments on passed pipes in `stepFlappyGame`, persists best score via storage, and synchronizes tile score through dashboard `setGameScore` callback.
+- STATUS reflects current integration state:
+  - PASS: Task 144 status section now documents active dashboard/game integration architecture and score wiring.
+- STATUS lists completed tasks:
+  - PASS: Completed integration chain is explicitly recorded.

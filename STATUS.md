@@ -2,7 +2,7 @@
 
 ## Project
 - Name: `experiment-mini-arcade`
-- Workflow: `Implement Top-Down Racing Game`
+- Workflow: `Integrate Games with Dashboard`
 - Snapshot Date (UTC): `2026-03-06`
 
 ## Task 102 Update (RUN_ID 181)
@@ -1133,3 +1133,52 @@ Implemented a new dashboard component as the main interface for composing game t
    - PASS: per-tile remove control + `removeDashboardTile` workflow implemented and tested.
 3. Users can rearrange game tiles on the dashboard:
    - PASS: left/right move controls and drag-drop reorder + `rearrangeDashboardTiles` workflow implemented and tested.
+
+## Task 144 Update (RUN_ID 231)
+Updated integration status documentation for workflow `Integrate Games with Dashboard`, including completion tracking for the dashboard/game integration sequence and current verification results.
+
+### Integration Progress Snapshot
+- Dashboard is the default application shell:
+  - `index.html` provides dashboard mount root.
+  - `js/game.js` bootstraps `createDashboardComponent`.
+- Dashboard catalog currently includes five games:
+  - `racing`, `clicker`, `color-match`, `anomaly`, `flappy`.
+- Tile lifecycle is implemented:
+  - Add/remove/reorder actions in `js/dashboard/logic.js`.
+  - Tile rendering + controls in `js/dashboard/gameTile.js`.
+  - Drag-and-drop and action handlers in `js/dashboard/component.js`.
+- Score-aware tile behavior is active:
+  - Tile score state tracked in dashboard logic via `updateDashboardTileScore`.
+  - UI score updates performed in-place with `updateGameTileElementScore`.
+- Embedded game integration is active for Flappy:
+  - `js/flappy/index.js` mounts an in-tile widget with loop/render/input.
+  - Dashboard component mounts Flappy widget for `flappy` tiles and forwards score events through `setGameScore`.
+
+### Completed Tasks In This Integration Workflow
+1. Task 141 (`RUN_ID 226`): Created dashboard component with tile management as primary interface.
+2. Task 142 (`RUN_ID 229`): Developed score-aware game tile component and dashboard score update flow.
+3. Task 143 (`RUN_ID 230`): Integrated Flappy game widget into dashboard with live score synchronization.
+4. Task 144 (`RUN_ID 231`): Updated STATUS documentation to reflect current integration state and completion trail.
+
+### Verification (Task 144)
+1. `ls -1 Makefile package.json package-lock.json 2>/dev/null || true`
+   - Result: PASS (no script manifests detected in repository root)
+2. `for f in tests/*.mjs; do echo "==> $f"; node "$f"; done`
+   - Result: PASS
+   - Output includes:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
+     - `dashboard.logic.test: ok`
+     - `flappy.logic.test: ok`
+     - `racing.controls.test: ok`
+     - `racing.logic.test: ok`
+     - `storage.score.test: ok`
+3. `node --check js/game.js && node --check js/dashboard/logic.js && node --check js/dashboard/component.js && node --check js/dashboard/gameTile.js && node --check js/flappy/logic.js && node --check js/flappy/index.js`
+   - Result: PASS
+
+### Acceptance Mapping (Task 144)
+1. `STATUS.md` reflects current integration state:
+   - PASS: This section records current dashboard/game integration architecture, active tile scoring, and embedded Flappy wiring.
+2. `STATUS.md` lists completed tasks:
+   - PASS: Completed task chain for integration workflow is explicitly listed (Tasks 141, 142, 143, and this Task 144 update).
