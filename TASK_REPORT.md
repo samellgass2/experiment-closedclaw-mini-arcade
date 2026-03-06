@@ -1,37 +1,30 @@
 # TASK REPORT
 
 ## Task
-- TASK_ID: 108
-- RUN_ID: 187
-- Title: Create Clicker Game Logic
+- TASK_ID: 109
+- RUN_ID: 188
+- Title: Implement Countdown Timer
 
 ## Summary
-Implemented clicker game core logic that tracks user click input and score progression, wired it into the main runtime, and added dedicated logic tests.
+Implemented countdown timer improvements for the clicker game by adding explicit countdown behavior tests and stabilizing runtime end-of-round handling when time reaches zero.
 
 ## Files Changed
-- `js/clicker/logic.js`
-- `js/clicker/index.js`
-- `js/clicker.js`
 - `js/game.js`
-- `index.html`
 - `tests/clicker.logic.test.mjs`
 - `STATUS.md`
 - `TASK_REPORT.md`
 
 ## Implementation Details
-- Added a standalone clicker logic module with:
-  - explicit game states (`READY`, `RUNNING`, `PAUSED`, `OVER`)
-  - score updates per click
-  - combo streak bonus handling
-  - round timer ticking and auto-finish on timeout
-  - best score persistence support
-  - reset, pause/resume, finish, and snapshot helpers
-- Reworked runtime entrypoint to run a clicker interaction loop:
-  - clicking the canvas registers input and updates score immediately
-  - HUD reflects score, best score, clicks, combo, and remaining time
-  - keyboard controls support start/resume (`Enter`), pause (`P`), restart/end (`R`)
-- Updated UI copy in `index.html` to match clicker gameplay semantics.
-- Added unit tests to verify click handling and score tracking behavior.
+- Enhanced timer display in `js/game.js`:
+  - Replaced basic second formatting with `formatCountdown`.
+  - Shows `mm:ss` for minute-plus durations and second+tenths for short countdown visibility.
+- Hardened round completion behavior in `js/game.js`:
+  - Added a one-shot overlay guard to avoid repeated completion handling after timeout.
+  - Ensured timeout transitions remain driven by the clicker state's `remainingMs` reaching `0`.
+- Extended logic tests in `tests/clicker.logic.test.mjs`:
+  - Added coverage to assert countdown decrements correctly over ticks.
+  - Added coverage to assert auto-end when timer reaches zero.
+  - Added coverage to assert paused rounds do not consume countdown time.
 
 ## Verification
 1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
@@ -42,6 +35,6 @@ Implemented clicker game core logic that tracks user click input and score progr
    - `clicker.logic.test: ok`
 
 ## Acceptance Test Mapping
-- Verify that the game tracks score correctly and responds to user clicks: **met**
-  - Click input is registered via clicker logic in `registerClick` and runtime canvas pointer handling.
-  - Score increments and combo-based gains are validated in `tests/clicker.logic.test.mjs`.
+- Verify that the timer counts down correctly and ends the game when it reaches zero: **met**
+  - Countdown decrement and timeout transition are validated via `testCountdownTicksToZeroAndStopsGame`.
+  - Pause/resume countdown behavior is validated via `testPausePreservesCountdownUntilResume`.

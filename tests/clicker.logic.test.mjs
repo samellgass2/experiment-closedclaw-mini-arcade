@@ -118,10 +118,59 @@ function testResetAndSnapshot() {
   assert.equal(state.remainingMs, 10000);
 }
 
+function testCountdownTicksToZeroAndStopsGame() {
+  const state = createClickerState({
+    roundDurationMs: 3000,
+    autoStartOnClick: false
+  });
+
+  startClickerGame(state, 100);
+  assert.equal(state.status, CLICKER_STATUS.RUNNING);
+  assert.equal(state.remainingMs, 3000);
+
+  tickClickerGame(state, 600);
+  assert.equal(state.remainingMs, 2500, "countdown should subtract elapsed tick time");
+  assert.equal(state.status, CLICKER_STATUS.RUNNING);
+
+  tickClickerGame(state, 2600);
+  assert.equal(state.remainingMs, 500);
+  assert.equal(state.status, CLICKER_STATUS.RUNNING);
+
+  tickClickerGame(state, 3100);
+  assert.equal(state.remainingMs, 0, "countdown should floor at zero");
+  assert.equal(state.status, CLICKER_STATUS.OVER, "game should end when countdown reaches zero");
+  assert.equal(state.finalReason, "time-expired");
+
+  const rejectedAfterTimeout = registerClick(state, 3200);
+  assert.equal(rejectedAfterTimeout.accepted, false, "clicks should be rejected after timeout");
+  assert.equal(state.score, 0);
+}
+
+function testPausePreservesCountdownUntilResume() {
+  const state = createClickerState({
+    roundDurationMs: 5000,
+    autoStartOnClick: false
+  });
+
+  startClickerGame(state, 0);
+  tickClickerGame(state, 1000);
+  assert.equal(state.remainingMs, 4000);
+
+  pauseClickerGame(state);
+  tickClickerGame(state, 3000);
+  assert.equal(state.remainingMs, 4000, "countdown should not tick while paused");
+
+  resumeClickerGame(state, 3500);
+  tickClickerGame(state, 4500);
+  assert.equal(state.remainingMs, 3000, "countdown should continue after resume from new tick baseline");
+}
+
 function run() {
   testAutoStartAndScoreTracking();
   testPauseResumeAndRejectedClicks();
   testResetAndSnapshot();
+  testCountdownTicksToZeroAndStopsGame();
+  testPausePreservesCountdownUntilResume();
   console.log("clicker.logic.test: ok");
 }
 

@@ -406,3 +406,33 @@ Implemented clicker game core logic and wired runtime click input to score track
    - Output:
      - `anomaly.logic.test: ok`
      - `clicker.logic.test: ok`
+
+## Task 109 Update (RUN_ID 188)
+Implemented countdown timer hardening for the clicker game, including explicit timer-focused test coverage and stable game-over behavior when time reaches zero.
+
+### Timer Enhancements
+- Updated clicker runtime timer display in `js/game.js`:
+  - Introduced `formatCountdown` for a more explicit countdown readout (mm:ss for longer rounds, tenths display under a minute).
+  - Ensured HUD time readout is refreshed from `remainingMs` each frame while running.
+- Stabilized timeout completion flow in `js/game.js`:
+  - Added a one-shot completion guard so timer-expiry end-of-round overlay/message rendering happens once per round.
+  - Preserved pause/resume/start behavior while preventing repeated "Round Complete" overlay work across animation frames.
+
+### Tests Added
+- Extended `tests/clicker.logic.test.mjs` with countdown-specific coverage:
+  - `testCountdownTicksToZeroAndStopsGame`: verifies remaining time decreases across ticks, floors at zero, and transitions to `OVER` with `time-expired`.
+  - `testPausePreservesCountdownUntilResume`: verifies timer does not tick while paused and resumes countdown correctly after resume.
+
+### Verification (Task 109)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+
+### Acceptance Mapping
+- Verify that the timer counts down correctly and ends the game when it reaches zero:
+  - PASS: Countdown decrement and timeout transition are directly validated in `tests/clicker.logic.test.mjs` (`testCountdownTicksToZeroAndStopsGame`).
+  - PASS: Runtime loop now performs one-shot round completion handling when timer expiry sets game state to `OVER`.

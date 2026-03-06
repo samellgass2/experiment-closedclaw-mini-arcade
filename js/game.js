@@ -45,8 +45,18 @@ function createUIBindings() {
   };
 }
 
-function formatSeconds(remainingMs) {
-  return String(Math.max(0, Math.ceil(remainingMs / 1000)));
+function formatCountdown(remainingMs) {
+  const safeRemaining = Math.max(0, remainingMs);
+  const wholeSeconds = Math.floor(safeRemaining / 1000);
+  const minutes = Math.floor(wholeSeconds / 60);
+  const seconds = wholeSeconds % 60;
+  const tenths = Math.floor((safeRemaining % 1000) / 100);
+
+  if (minutes > 0) {
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${seconds}.${tenths}s`;
 }
 
 function renderOverlay(ui, title, message, actionLabel) {
@@ -96,7 +106,7 @@ function updateHUD(ui, state, clickResult = null) {
   ui.bestScoreValue.textContent = String(snapshot.bestScore);
   ui.livesValue.textContent = String(snapshot.totalClicks);
   ui.levelValue.textContent = String(snapshot.highestCombo);
-  ui.timeValue.textContent = formatSeconds(snapshot.remainingMs);
+  ui.timeValue.textContent = formatCountdown(snapshot.remainingMs);
   ui.statusValue.textContent = state.status;
 
   if (state.status === CLICKER_STATUS.READY) {
@@ -157,15 +167,26 @@ const state = createClickerState({
 });
 
 let animationFrame = 0;
+let hasShownRoundCompleteOverlay = false;
 
 function beginRound(now) {
   startClickerGame(state, now);
+  hasShownRoundCompleteOverlay = false;
   hideOverlay(ui);
   updateHUD(ui, state);
 }
 
 function endRound(now, reason) {
-  finishClickerGame(state, now, reason);
+  if (hasShownRoundCompleteOverlay) {
+    updateHUD(ui, state);
+    return;
+  }
+
+  if (state.status !== CLICKER_STATUS.OVER) {
+    finishClickerGame(state, now, reason);
+  }
+
+  hasShownRoundCompleteOverlay = true;
   updateHUD(ui, state);
   renderOverlay(
     ui,
@@ -192,6 +213,7 @@ function handleStartButton() {
 
   if (state.status === CLICKER_STATUS.PAUSED) {
     resumeClickerGame(state, performance.now());
+    hasShownRoundCompleteOverlay = false;
     hideOverlay(ui);
     updateHUD(ui, state);
     return;
@@ -219,6 +241,7 @@ function handleKeyDown(event) {
 
     if (state.status === CLICKER_STATUS.PAUSED) {
       resumeClickerGame(state, performance.now());
+      hasShownRoundCompleteOverlay = false;
       hideOverlay(ui);
       updateHUD(ui, state);
     }
