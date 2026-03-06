@@ -2,7 +2,7 @@
 
 ## Project
 - Name: `experiment-mini-arcade`
-- Workflow: `Implement Color Matching Game`
+- Workflow: `Implement Top-Down Racing Game`
 - Snapshot Date (UTC): `2026-03-06`
 
 ## Task 102 Update (RUN_ID 181)
@@ -762,3 +762,65 @@ Updated project status documentation to reflect the current state of the Color M
 ### Overall Workflow Verdict
 - PASS
 - Rationale: The branch delivers a functioning color matching game where users adjust RGB values to match target colors, scores are computed from accuracy and interaction performance, and feedback is shown per round and across game summary UI.
+
+## Task 124 Update (RUN_ID 203)
+Implemented a new top-down racing game scaffold as the active arcade experience, centered on a rendered canvas track and a safe initial game setup.
+
+### Structure Added
+- New racing modules:
+  - `js/racing/logic.js`
+  - `js/racing/renderer.js`
+- New tests:
+  - `tests/racing.logic.test.mjs`
+- Updated entrypoint and presentation:
+  - `js/game.js`
+  - `index.html`
+  - `css/styles.css`
+
+### What This Setup Provides
+- Dedicated game state machine for racing: `READY`, `RUNNING`, `PAUSED`, `OVER`.
+- Canvas-first game surface (`#raceCanvas`) with deterministic dimensions and immediate first render on load.
+- Baseline oval track model with:
+  - Outer/inner bounds
+  - Start line marker
+  - Spawn point and heading
+- Core vehicle simulation loop:
+  - Throttle, brake/reverse, steering, drag, off-track penalty
+  - Position/heading integration each frame
+- Lap/session bookkeeping:
+  - Elapsed race timer
+  - Current lap timer
+  - Completed lap count and lap target
+  - Best-lap persistence via `localStorage`
+- HUD and controls wiring:
+  - Buttons: start, pause/resume, reset
+  - Keyboard controls for movement and start/pause (`WASD`/arrows, `Space`)
+  - Event feed and on/off track status indicator
+- Debug-friendly runtime exposure:
+  - `window.__TOP_DOWN_RACING__.getSnapshot()` for quick state inspection
+
+### Verification (Task 124)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs && node tests/racing.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
+     - `racing.logic.test: ok`
+3. Local HTTP smoke check (`python3 -m http.server` + `curl`)
+   - Result: PASS
+   - Output:
+     - `/ 200`
+     - `/index.html 200`
+     - `/css/styles.css 200`
+     - `/js/game.js 200`
+     - `/js/racing/logic.js 200`
+     - `/js/racing/renderer.js 200`
+
+### Acceptance Mapping (Task 124)
+1. Verify game canvas is displayed correctly:
+   - Satisfied by new `index.html` canvas container and `js/game.js` initialization/render path calling renderer on startup.
+2. Verify initial game state is set up without errors:
+   - Satisfied by `createRacingState()` defaults (`READY` state, spawn point, timers, input map) and passing syntax/tests/smoke checks.

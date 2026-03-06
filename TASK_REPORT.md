@@ -1,25 +1,43 @@
-# Task Report: TASK_ID 117 (RUN_ID 196)
+# Task Report: TASK_ID 124 (RUN_ID 203)
 
 ## Summary
-Updated `STATUS.md` to accurately document the current development state of the Color Matching Game.
+Created a top-down racing game structure with a canvas-based playfield, initialized game state machine, core loop scaffolding, HUD wiring, and baseline controls.
 
 ## Changes Made
-- Updated project workflow label in `STATUS.md` to `Implement Color Matching Game`.
-- Added `Task 117 Update (RUN_ID 196)` section in `STATUS.md` describing:
-  - Current game lifecycle and round progression states.
-  - RGB input controls, clamping behavior, and adjustment tracking.
-  - Scoring model, feedback payloads, and performance summary metrics.
-  - UI wiring across `index.html`, `css/styles.css`, and `js/game.js`.
-  - Best-score persistence behavior.
-- Added explicit verification command results and acceptance mapping for Task 117.
+- Replaced active game page with racing-focused layout:
+  - `index.html`
+  - Added `#raceCanvas`, racing HUD, control buttons, and event feed.
+- Replaced styles with racing UI/theme and responsive canvas layout:
+  - `css/styles.css`
+- Reworked entrypoint to racing controller/bootstrap:
+  - `js/game.js`
+  - Binds DOM, keyboard input, control actions, and animation loop.
+- Added racing core logic module:
+  - `js/racing/logic.js`
+  - Includes state/config creation, status transitions, ticking/physics, lap tracking, and snapshot API.
+- Added racing renderer module:
+  - `js/racing/renderer.js`
+  - Draws background/track/car to canvas and updates HUD values.
+- Added automated logic coverage for racing scaffold:
+  - `tests/racing.logic.test.mjs`
+- Updated project status documentation:
+  - `STATUS.md`
+  - Added Task 124 implementation, verification details, and acceptance mapping.
 
 ## Verification
 Executed and passed:
 1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
-2. `node tests/color-match.logic.test.mjs`
-3. `node tests/clicker.logic.test.mjs`
-4. `node tests/anomaly.logic.test.mjs`
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs && node tests/racing.logic.test.mjs`
+3. Local HTTP smoke check via `python3 -m http.server` + `curl` for:
+   - `/`
+   - `/index.html`
+   - `/css/styles.css`
+   - `/js/game.js`
+   - `/js/racing/logic.js`
+   - `/js/racing/renderer.js`
 
 ## Acceptance Criteria Mapping
-- Verify that `STATUS.md` reflects the current state of the color matching game development accurately: satisfied.
-  - `STATUS.md` now includes a dedicated Task 117 progress section with implementation and validation details aligned to the current codebase.
+- Verify that the game canvas is displayed correctly:
+  - `index.html` now includes a dedicated racing `<canvas id="raceCanvas">` and `js/game.js` performs immediate first render.
+- Verify that the initial game state is set up without errors:
+  - `createRacingState()` initializes `READY` state, timers, lap counters, track model, and car spawn values; syntax checks, tests, and smoke checks pass.
