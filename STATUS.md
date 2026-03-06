@@ -596,3 +596,27 @@ Updated project status documentation to reflect the current clicker game impleme
 ### Overall Workflow Verdict
 - PASS
 - Rationale: The branch implements a playable time-limited clicker game where rapid input increases score, a countdown timer governs round duration, and game state cleanly ends at timeout with UI feedback.
+
+## Task 114 Update (RUN_ID 193)
+Implemented standalone color matching game logic with per-channel input tracking and accuracy-based scoring.
+
+### Logic Implemented
+- Added color matching domain module:
+  - `js/color-match/logic.js`
+  - Includes game/round state model, lifecycle controls, RGB adjustment handling, distance/accuracy calculation, and score computation.
+- Added exports for consistency with existing module layout:
+  - `js/color-match/index.js`
+  - `js/color-match.js`
+- Added acceptance-focused tests:
+  - `tests/color-match.logic.test.mjs`
+  - Verifies user input tracking (including clamping and channel counters), score ordering by color accuracy, round progression, and best-score persistence.
+
+### Verification (Task 114)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
