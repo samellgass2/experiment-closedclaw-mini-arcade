@@ -1,32 +1,32 @@
-# Task Report: TASK_ID 132 (RUN_ID 216)
+# Task Report: TASK_ID 133 (RUN_ID 218)
 
 ## Summary
-Integrated the persistence layer with all game score flows by standardizing racing and anomaly persistence usage, and verified retrieval/update behavior for each game via tests.
+Updated `STATUS.md` with a dedicated persistence-layer implementation section covering architecture, behavior guarantees, game integrations, test coverage, and acceptance mapping.
 
 ## Changes
-- Refactored racing persistence to use shared score storage helpers:
-  - Updated `js/racing/logic.js` to use `resolveStorage`, `readScore`, and `writeScore` from `js/storage/score.js`.
-  - Replaced custom racing best-lap storage read/write logic with shared persistence layer wrappers.
-- Standardized anomaly state creation to accept injected persistence storage:
-  - Updated `js/anomaly/state.js` `createGameState(runtime = {})` to resolve storage via shared `resolveStorage(runtime.storage)`.
-- Expanded persistence acceptance coverage:
-  - Added racing cross-session persistence test in `tests/racing.logic.test.mjs` to verify best lap is restored from storage.
-  - Updated anomaly persistence test in `tests/anomaly.logic.test.mjs` to validate storage injection and cross-session restoration behavior.
+- Appended `## Task 133 Update (RUN_ID 218)` to `STATUS.md`.
+- Documented shared persistence module responsibilities in `js/storage/score.js`:
+  - storage resolution strategy
+  - read/write normalization and fallback behavior
+  - exception-safe persistence handling
+- Documented integration points across game modules:
+  - `js/anomaly/state.js`
+  - `js/clicker/logic.js`
+  - `js/color-match/logic.js`
+  - `js/racing/logic.js`
+- Documented persistence-focused test coverage:
+  - `tests/storage.score.test.mjs`
+  - integration checks in anomaly/clicker/color-match/racing logic suites
 
 ## Verification
 Executed:
-`for test_file in tests/*.test.mjs; do node "$test_file"; done`
+`node --test tests/*.mjs`
 
 Result:
-- anomaly.logic.test: ok
-- clicker.logic.test: ok
-- color-match.logic.test: ok
-- racing.controls.test: ok
-- racing.logic.test: ok
-- storage.score.test: ok
+- PASS (`6/6` test files)
+- Includes `storage.score.test: ok` and all game logic suites passing.
 
 ## Acceptance Coverage
-- `clicker`: best score persists and is reloaded across sessions (`tests/clicker.logic.test.mjs`).
-- `color-match`: best score persists and is reloaded across sessions (`tests/color-match.logic.test.mjs`).
-- `anomaly`: best score persists and is reloaded via persistence layer storage injection (`tests/anomaly.logic.test.mjs`).
-- `racing`: best lap persists and is reloaded across sessions using shared persistence helpers (`tests/racing.logic.test.mjs`).
+- Requirement: update `STATUS.md` with relevant persistence-layer implementation details.
+- Status: PASS.
+- Evidence: New Task 133 section in `STATUS.md` includes implementation details, integration mapping, and verification results.

@@ -972,3 +972,51 @@ Updated status documentation for the active top-down racing workflow to reflect 
 
 ### Overall Verdict
 - CLEAN
+
+## Task 133 Update (RUN_ID 218)
+Documented the persistence layer implementation for the mini-arcade project, including shared storage utilities, game-specific integration points, and test coverage.
+
+### Persistence Layer Implementation
+- Shared module: `js/storage/score.js`
+  - `resolveStorage(storageOverride)` returns an injected storage adapter when provided, otherwise resolves browser `window.localStorage`, and safely returns `null` in non-browser/runtime-test environments.
+  - `readScore(storage, key, fallback)` validates storage API shape, reads persisted string values, normalizes them to non-negative integers, and falls back safely when values are missing/invalid or storage access throws.
+  - `writeScore(storage, key, value)` validates inputs, normalizes values to non-negative integers, persists as strings, and returns `false` when writes are unavailable or rejected.
+- Normalization and resilience guarantees:
+  - Persisted values are always stored as integer strings.
+  - Negative/invalid values are clamped to `0` or fallback values.
+  - Persistence calls are exception-safe to avoid breaking gameplay when storage is blocked/unavailable.
+
+### Integration Across Games
+- `js/anomaly/state.js`
+  - Loads best score from storage during `createGameState()`.
+  - Writes updated best score during `updateBestScore()` when current score exceeds prior best.
+- `js/clicker/logic.js`
+  - Loads best score during `createClickerState()`.
+  - Persists best score at game-over transitions in `toOverState()`.
+- `js/color-match/logic.js`
+  - Loads best score during `createColorMatchState()`.
+  - Persists best score in `finalizeBestScore()` when a run ends above previous best.
+- `js/racing/logic.js`
+  - Loads best lap during `createRacingState()` via `readBestLapMs()`.
+  - Persists best lap in `updateLapProgress()` when a faster lap is recorded.
+
+### Test Coverage for Persistence
+- `tests/storage.score.test.mjs`
+  - Verifies round-trip read/write behavior and integer normalization.
+  - Verifies fallback behavior for missing/invalid stored values.
+  - Verifies graceful failure behavior when storage writes throw.
+  - Verifies storage resolver behavior for injected storage and non-browser contexts.
+- Game logic suites validate persistence integration paths:
+  - `tests/anomaly.logic.test.mjs`
+  - `tests/clicker.logic.test.mjs`
+  - `tests/color-match.logic.test.mjs`
+  - `tests/racing.logic.test.mjs`
+
+### Verification (Task 133)
+1. `node --test tests/*.mjs`
+   - Result: PASS
+   - Summary: all suites passed, including storage and all game persistence integration tests.
+
+### Acceptance Mapping (Task 133)
+1. Update `STATUS.md` with relevant persistence-layer details:
+   - PASS: This section now records persistence module responsibilities, cross-game usage, normalization/failure safeguards, and verification evidence.
