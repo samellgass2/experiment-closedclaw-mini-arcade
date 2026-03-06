@@ -1,50 +1,32 @@
-# TASK REPORT
-
-## Task
-- TASK_ID: 114
-- RUN_ID: 193
-- Title: Create Color Matching Game Logic
+# Task Report: TASK_ID 115 (RUN_ID 194)
 
 ## Summary
-Implemented core color matching game logic that supports RGB user adjustments, tracks user input activity, and computes score from color-match accuracy against a target color.
+Implemented the Color Matching Game UI and connected it to the existing color-match game logic.
 
-## Files Changed
-- `js/color-match/logic.js`
-- `js/color-match/index.js`
-- `js/color-match.js`
-- `tests/color-match.logic.test.mjs`
-- `STATUS.md`
-- `TASK_REPORT.md`
-
-## Implementation Details
-- Added a complete color-match logic module with:
-  - Game/round lifecycle state (`READY`, `RUNNING`, `ROUND_COMPLETE`, `OVER`).
-  - Config/state factories and reset/start/finish controls.
-  - Target color generation and round setup.
-  - Per-channel user input handling via set and delta operations.
-  - Input tracking counters and adjustment history.
-  - RGB distance-based accuracy calculation.
-  - Round scoring derived from accuracy, with near/exact match bonuses.
-  - Best-score persistence support through storage.
-  - Snapshot helper for UI/readout integration.
-- Added dedicated tests that validate:
-  - User input tracking and RGB clamping behavior.
-  - Score behavior ordering by accuracy.
-  - Round submission progression and game-over transition.
-  - Best-score persistence when run completes.
-  - Rejection behavior when round is not running.
+## Changes Made
+- Updated `index.html` to provide:
+  - Target/guess color swatches with RGB readouts.
+  - RGB controls for red, green, and blue (slider, numeric input, +/- buttons).
+  - Round action buttons (`Submit Guess`, `Next Round`, `Restart Game`).
+  - HUD/readout sections for score, round progress, status, and feedback.
+  - Overlay prompts for start/round-complete/game-complete states.
+- Updated `css/styles.css` to style the new UI and support responsive layouts.
+- Replaced `js/game.js` controller to:
+  - Use `js/color-match/logic.js` APIs.
+  - Sync user inputs to game state and swatches in real time.
+  - Handle round submission/progression/restart.
+  - Reflect status transitions and feedback in the UI.
+  - Support keyboard controls (`Enter`, `R/F`, `G/H`, `B/N`).
+- Updated `STATUS.md` with a dedicated Task 115 update and verification notes.
 
 ## Verification
-1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
-   - PASS
-2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs`
-   - PASS
-   - `anomaly.logic.test: ok`
-   - `clicker.logic.test: ok`
-   - `color-match.logic.test: ok`
+Executed and passed:
+1. `node --check js/game.js`
+2. `node tests/color-match.logic.test.mjs`
+3. `node tests/clicker.logic.test.mjs`
+4. `node tests/anomaly.logic.test.mjs`
 
-## Acceptance Test Mapping
-- Verify that the game logic correctly tracks user inputs: **met**
-  - Input adjustments are recorded per step and counted globally/per channel; validated by `tests/color-match.logic.test.mjs`.
-- Verify that score is calculated based on accuracy: **met**
-  - Round score is derived from normalized RGB distance (accuracy percent) and tested with exact/near/weak guesses in `tests/color-match.logic.test.mjs`.
+## Acceptance Criteria Mapping
+- UI displays target color and user-adjustable inputs: satisfied.
+- UI responds to interactions (sliders, numeric inputs, buttons, keyboard): satisfied.
+- Responsive behavior: satisfied via CSS breakpoints and adaptive control layout.

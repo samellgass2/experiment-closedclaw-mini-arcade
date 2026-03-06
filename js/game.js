@@ -1,14 +1,13 @@
 import {
-  CLICKER_STATUS,
-  createClickerState,
-  startClickerGame,
-  pauseClickerGame,
-  resumeClickerGame,
-  tickClickerGame,
-  registerClick,
-  getClickerSnapshot,
-  finishClickerGame
-} from "./clicker/logic.js";
+  COLOR_MATCH_STATUS,
+  createColorMatchState,
+  startColorMatchGame,
+  startNextRound,
+  setChannelValue,
+  adjustChannelValue,
+  submitRound,
+  getColorMatchSnapshot
+} from "./color-match/logic.js";
 
 function queryRequiredElement(id) {
   const node = document.getElementById(id);
@@ -22,19 +21,25 @@ function queryRequiredElement(id) {
 
 function createUIBindings() {
   return {
-    canvas: queryRequiredElement("gameCanvas"),
     overlay: queryRequiredElement("overlay"),
     overlayTitle: queryRequiredElement("overlayTitle"),
     overlayMessage: queryRequiredElement("overlayMessage"),
     startButton: queryRequiredElement("startButton"),
+    submitRoundButton: queryRequiredElement("submitRoundButton"),
+    nextRoundButton: queryRequiredElement("nextRoundButton"),
+    restartButton: queryRequiredElement("restartButton"),
     scoreValue: queryRequiredElement("scoreValue"),
     bestScoreValue: queryRequiredElement("bestScoreValue"),
-    clicksValue: queryRequiredElement("clicksValue"),
-    comboValue: queryRequiredElement("comboValue"),
-    timeValue: queryRequiredElement("timeValue"),
-    timerProgressValue: queryRequiredElement("timerProgressValue"),
+    roundValue: queryRequiredElement("roundValue"),
+    roundMetaValue: queryRequiredElement("roundMetaValue"),
+    adjustmentsValue: queryRequiredElement("adjustmentsValue"),
+    accuracyValue: queryRequiredElement("accuracyValue"),
     statusValue: queryRequiredElement("statusValue"),
     eventFeedValue: queryRequiredElement("eventFeedValue"),
+    targetSwatch: queryRequiredElement("targetSwatch"),
+    guessSwatch: queryRequiredElement("guessSwatch"),
+    targetRgbValue: queryRequiredElement("targetRgbValue"),
+    guessRgbValue: queryRequiredElement("guessRgbValue"),
     selectedCellLabel: queryRequiredElement("selectedCellLabel"),
     selectedTemperatureValue: queryRequiredElement("selectedTemperatureValue"),
     selectedLatencyValue: queryRequiredElement("selectedLatencyValue"),
@@ -42,22 +47,37 @@ function createUIBindings() {
     deviationTemperatureValue: queryRequiredElement("deviationTemperatureValue"),
     deviationLatencyValue: queryRequiredElement("deviationLatencyValue"),
     deviationErrorRateValue: queryRequiredElement("deviationErrorRateValue"),
-    selectionVerdictValue: queryRequiredElement("selectionVerdictValue")
+    selectionVerdictValue: queryRequiredElement("selectionVerdictValue"),
+    redRange: queryRequiredElement("redRange"),
+    greenRange: queryRequiredElement("greenRange"),
+    blueRange: queryRequiredElement("blueRange"),
+    redInput: queryRequiredElement("redInput"),
+    greenInput: queryRequiredElement("greenInput"),
+    blueInput: queryRequiredElement("blueInput"),
+    redDownButton: queryRequiredElement("redDownButton"),
+    redUpButton: queryRequiredElement("redUpButton"),
+    greenDownButton: queryRequiredElement("greenDownButton"),
+    greenUpButton: queryRequiredElement("greenUpButton"),
+    blueDownButton: queryRequiredElement("blueDownButton"),
+    blueUpButton: queryRequiredElement("blueUpButton")
   };
 }
 
-function formatCountdown(remainingMs) {
-  const safeRemaining = Math.max(0, remainingMs);
-  const wholeSeconds = Math.floor(safeRemaining / 1000);
-  const minutes = Math.floor(wholeSeconds / 60);
-  const seconds = wholeSeconds % 60;
-  const tenths = Math.floor((safeRemaining % 1000) / 100);
-
-  if (minutes > 0) {
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+function sanitizeColorValue(value, fallback = 0) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
   }
 
-  return `${seconds}.${tenths}s`;
+  return Math.max(0, Math.min(255, parsed));
+}
+
+function toRgbString(color) {
+  return `RGB(${color.red}, ${color.green}, ${color.blue})`;
+}
+
+function toCssColor(color) {
+  return `rgb(${color.red}, ${color.green}, ${color.blue})`;
 }
 
 function renderOverlay(ui, title, message, actionLabel) {
@@ -71,230 +91,323 @@ function hideOverlay(ui) {
   ui.overlay.classList.remove("visible");
 }
 
-function updateReadoutCards(ui, snapshot, clickResult = null) {
-  ui.selectedCellLabel.textContent = `Total clicks: ${snapshot.totalClicks}`;
-  ui.selectedTemperatureValue.textContent = String(snapshot.score);
-  ui.selectedLatencyValue.textContent = String(snapshot.comboStreak);
-  ui.selectedErrorRateValue.textContent = String(snapshot.highestCombo);
+function updateStatusClass(ui, status) {
+  ui.statusValue.classList.remove("is-ready", "is-running", "is-round-complete", "is-over");
 
-  ui.deviationTemperatureValue.textContent = clickResult ? `+${clickResult.pointsAwarded}` : "--";
-  ui.deviationLatencyValue.textContent = `Clicks: ${snapshot.totalClicks}`;
-  ui.deviationErrorRateValue.textContent = `Best combo: ${snapshot.highestCombo}`;
+  if (status === COLOR_MATCH_STATUS.READY) {
+    ui.statusValue.classList.add("is-ready");
+  } else if (status === COLOR_MATCH_STATUS.RUNNING) {
+    ui.statusValue.classList.add("is-running");
+  } else if (status === COLOR_MATCH_STATUS.ROUND_COMPLETE) {
+    ui.statusValue.classList.add("is-round-complete");
+  } else {
+    ui.statusValue.classList.add("is-over");
+  }
+}
 
-  if (!clickResult) {
-    ui.selectionVerdictValue.textContent = "Awaiting click";
+function updateColorSwatches(ui, snapshot) {
+  const currentRound = snapshot.currentRound;
+  if (!currentRound) {
+    ui.targetSwatch.style.background = "linear-gradient(135deg, #f0f0f0, #dbdbdb)";
+    ui.guessSwatch.style.background = "linear-gradient(135deg, #f0f0f0, #dbdbdb)";
+    ui.targetRgbValue.textContent = "RGB(--, --, --)";
+    return;
+  }
+
+  ui.targetSwatch.style.background = toCssColor(currentRound.targetColor);
+  ui.guessSwatch.style.background = toCssColor(currentRound.guessColor);
+  ui.targetRgbValue.textContent = toRgbString(currentRound.targetColor);
+  ui.guessRgbValue.textContent = toRgbString(currentRound.guessColor);
+}
+
+function updateInputsFromRound(ui, snapshot) {
+  const currentRound = snapshot.currentRound;
+  if (!currentRound) {
+    return;
+  }
+
+  const values = {
+    red: currentRound.guessColor.red,
+    green: currentRound.guessColor.green,
+    blue: currentRound.guessColor.blue
+  };
+
+  ui.redRange.value = String(values.red);
+  ui.redInput.value = String(values.red);
+  ui.greenRange.value = String(values.green);
+  ui.greenInput.value = String(values.green);
+  ui.blueRange.value = String(values.blue);
+  ui.blueInput.value = String(values.blue);
+}
+
+function setControlsEnabled(ui, enabled) {
+  const controls = [
+    ui.submitRoundButton,
+    ui.redRange,
+    ui.greenRange,
+    ui.blueRange,
+    ui.redInput,
+    ui.greenInput,
+    ui.blueInput,
+    ui.redDownButton,
+    ui.redUpButton,
+    ui.greenDownButton,
+    ui.greenUpButton,
+    ui.blueDownButton,
+    ui.blueUpButton
+  ];
+
+  for (const control of controls) {
+    control.disabled = !enabled;
+  }
+}
+
+function updateFeedback(ui, snapshot, lastSubmitResult) {
+  ui.selectedErrorRateValue.textContent = String(snapshot.score);
+  ui.deviationTemperatureValue.textContent = String(snapshot.inputSummary.totalAdjustments);
+  ui.deviationLatencyValue.textContent = `${snapshot.inputSummary.redAdjustments} / ${snapshot.inputSummary.greenAdjustments} / ${snapshot.inputSummary.blueAdjustments}`;
+
+  if (snapshot.currentRound) {
+    ui.deviationErrorRateValue.textContent = toRgbString(snapshot.currentRound.guessColor);
+  } else {
+    ui.deviationErrorRateValue.textContent = "RGB(--, --, --)";
+  }
+
+  if (!lastSubmitResult) {
+    ui.selectedCellLabel.textContent = "Submit a guess to score points.";
+    ui.selectedTemperatureValue.textContent = "--";
+    ui.selectedLatencyValue.textContent = "--";
+    ui.selectionVerdictValue.textContent = "Awaiting input";
     ui.selectionVerdictValue.classList.remove("is-correct", "is-wrong");
     ui.selectionVerdictValue.classList.add("is-pending");
     return;
   }
 
-  if (clickResult.accepted) {
-    ui.selectionVerdictValue.textContent = `Click accepted (+${clickResult.pointsAwarded})`;
+  ui.selectedCellLabel.textContent = `Round ${lastSubmitResult.roundIndex} submitted.`;
+  ui.selectedTemperatureValue.textContent = `${lastSubmitResult.accuracyPercent.toFixed(2)}%`;
+  ui.selectedLatencyValue.textContent = String(lastSubmitResult.pointsAwarded);
+
+  if (lastSubmitResult.accepted) {
+    ui.selectionVerdictValue.textContent = `Scored +${lastSubmitResult.pointsAwarded}`;
     ui.selectionVerdictValue.classList.remove("is-pending", "is-wrong");
     ui.selectionVerdictValue.classList.add("is-correct");
-    return;
+  } else {
+    ui.selectionVerdictValue.textContent = "Submit unavailable";
+    ui.selectionVerdictValue.classList.remove("is-pending", "is-correct");
+    ui.selectionVerdictValue.classList.add("is-wrong");
   }
-
-  ui.selectionVerdictValue.textContent = "Click ignored (game not running)";
-  ui.selectionVerdictValue.classList.remove("is-pending", "is-correct");
-  ui.selectionVerdictValue.classList.add("is-wrong");
 }
 
-function updateHUD(ui, state, clickResult = null) {
-  const snapshot = getClickerSnapshot(state);
-  const timeRatio = state.config.roundDurationMs > 0
-    ? Math.max(0, Math.min(1, snapshot.remainingMs / state.config.roundDurationMs))
-    : 0;
+function updateHUD(ui, state, lastSubmitResult = null) {
+  const snapshot = getColorMatchSnapshot(state);
+  const roundsTotal = state.config.roundsPerGame;
+  const currentRoundIndex = snapshot.currentRound ? snapshot.currentRound.index : snapshot.roundsPlayed;
 
   ui.scoreValue.textContent = String(snapshot.score);
   ui.bestScoreValue.textContent = String(snapshot.bestScore);
-  ui.clicksValue.textContent = String(snapshot.totalClicks);
-  ui.comboValue.textContent = String(snapshot.highestCombo);
-  ui.timeValue.textContent = formatCountdown(snapshot.remainingMs);
-  ui.timerProgressValue.style.width = `${timeRatio * 100}%`;
-  ui.statusValue.textContent = state.status;
+  ui.roundValue.textContent = `${currentRoundIndex} / ${roundsTotal}`;
+  ui.roundMetaValue.textContent = `Rounds remaining: ${snapshot.roundsRemaining}`;
+  ui.adjustmentsValue.textContent = String(snapshot.inputSummary.totalAdjustments);
+  ui.accuracyValue.textContent = lastSubmitResult
+    ? `${lastSubmitResult.accuracyPercent.toFixed(1)}%`
+    : "--";
+  ui.statusValue.textContent = snapshot.status;
 
-  if (state.status === CLICKER_STATUS.READY) {
-    ui.eventFeedValue.textContent = "Ready. Start the round or click the board to auto-start.";
-  } else if (state.status === CLICKER_STATUS.RUNNING) {
-    ui.eventFeedValue.textContent = `Keep clicking. Combo streak: ${snapshot.comboStreak}.`;
-  } else if (state.status === CLICKER_STATUS.PAUSED) {
-    ui.eventFeedValue.textContent = "Paused. Press P or Start to resume.";
+  updateStatusClass(ui, snapshot.status);
+  updateColorSwatches(ui, snapshot);
+  updateInputsFromRound(ui, snapshot);
+  updateFeedback(ui, snapshot, lastSubmitResult);
+
+  if (snapshot.status === COLOR_MATCH_STATUS.READY) {
+    ui.eventFeedValue.textContent = "Ready. Press Start Game to begin.";
+  } else if (snapshot.status === COLOR_MATCH_STATUS.RUNNING) {
+    ui.eventFeedValue.textContent = "Adjust RGB controls, then submit your guess.";
+  } else if (snapshot.status === COLOR_MATCH_STATUS.ROUND_COMPLETE) {
+    ui.eventFeedValue.textContent = "Round complete. Review your score and continue to the next round.";
   } else {
-    ui.eventFeedValue.textContent = `Round complete (${snapshot.finalReason ?? "finished"}). Final score: ${snapshot.score}.`;
+    ui.eventFeedValue.textContent = `Game over (${snapshot.finalReason ?? "completed"}). Final score: ${snapshot.score}.`;
   }
 
-  updateReadoutCards(ui, snapshot, clickResult);
-}
-
-function drawClickTarget(canvas) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    return;
-  }
-
-  const width = canvas.width;
-  const height = canvas.height;
-
-  ctx.clearRect(0, 0, width, height);
-  const gradient = ctx.createLinearGradient(0, 0, width, height);
-  gradient.addColorStop(0, "#0f172a");
-  gradient.addColorStop(1, "#1d4ed8");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.globalAlpha = 0.14;
-  for (let i = 0; i < 8; i += 1) {
-    const radius = 16 + i * 14;
-    ctx.beginPath();
-    ctx.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = "#f8fafc";
-  ctx.font = "700 42px system-ui";
-  ctx.textAlign = "center";
-  ctx.fillText("CLICK", width / 2, height / 2 - 10);
-  ctx.font = "500 18px system-ui";
-  ctx.fillText("Tap anywhere in this board", width / 2, height / 2 + 24);
+  const roundRunning = snapshot.status === COLOR_MATCH_STATUS.RUNNING;
+  const roundComplete = snapshot.status === COLOR_MATCH_STATUS.ROUND_COMPLETE;
+  setControlsEnabled(ui, roundRunning);
+  ui.nextRoundButton.disabled = !roundComplete;
 }
 
 const ui = createUIBindings();
-const state = createClickerState({
-  roundDurationMs: 30000,
-  pointsPerClick: 1,
-  comboWindowMs: 750,
-  comboBonusCap: 5,
-  autoStartOnClick: true,
-  bestScoreStorageKey: "mini-arcade-clicker-best"
+const state = createColorMatchState({
+  roundsPerGame: 5,
+  bestScoreStorageKey: "mini-arcade-color-match-best"
 });
 
-let animationFrame = 0;
-let hasShownRoundCompleteOverlay = false;
+let lastSubmitResult = null;
 
-function beginRound(now) {
-  startClickerGame(state, now);
-  hasShownRoundCompleteOverlay = false;
+function beginGame() {
+  startColorMatchGame(state, { nowMs: performance.now() });
+  lastSubmitResult = null;
   hideOverlay(ui);
-  updateHUD(ui, state);
-}
-
-function endRound(now, reason) {
-  if (hasShownRoundCompleteOverlay) {
-    updateHUD(ui, state);
-    return;
-  }
-
-  if (state.status !== CLICKER_STATUS.OVER) {
-    finishClickerGame(state, now, reason);
-  }
-
-  hasShownRoundCompleteOverlay = true;
-  updateHUD(ui, state);
-  renderOverlay(
-    ui,
-    "Round Complete",
-    `Final score ${state.score}. Best ${state.bestScore}. Click restart for another run.`,
-    "Restart"
-  );
-}
-
-function handleCanvasClick() {
-  const now = performance.now();
-  const clickResult = registerClick(state, now);
-  updateHUD(ui, state, clickResult);
-
-  if (state.status === CLICKER_STATUS.OVER) {
-    endRound(now, state.finalReason ?? "time-expired");
-  }
+  updateHUD(ui, state, lastSubmitResult);
 }
 
 function handleStartButton() {
-  if (state.status === CLICKER_STATUS.RUNNING) {
+  if (state.status === COLOR_MATCH_STATUS.READY || state.status === COLOR_MATCH_STATUS.OVER) {
+    beginGame();
     return;
   }
 
-  if (state.status === CLICKER_STATUS.PAUSED) {
-    resumeClickerGame(state, performance.now());
-    hasShownRoundCompleteOverlay = false;
+  if (state.status === COLOR_MATCH_STATUS.ROUND_COMPLETE) {
+    startNextRound(state, { nowMs: performance.now() });
+    lastSubmitResult = null;
     hideOverlay(ui);
-    updateHUD(ui, state);
+    updateHUD(ui, state, lastSubmitResult);
+  }
+}
+
+function applyChannelInput(channel, rawValue) {
+  const safeValue = sanitizeColorValue(rawValue, 128);
+  const result = setChannelValue(state, channel, safeValue, performance.now());
+  if (!result.accepted) {
     return;
   }
 
-  beginRound(performance.now());
+  lastSubmitResult = null;
+  updateHUD(ui, state, lastSubmitResult);
+}
+
+function applyChannelDelta(channel, delta) {
+  const result = adjustChannelValue(state, channel, delta, performance.now());
+  if (!result.accepted) {
+    return;
+  }
+
+  lastSubmitResult = null;
+  updateHUD(ui, state, lastSubmitResult);
+}
+
+function handleSubmitRound() {
+  const roundIndex = state.currentRound ? state.currentRound.index : state.roundsPlayed;
+  const submission = submitRound(state, performance.now());
+  if (!submission.accepted) {
+    updateHUD(ui, state, lastSubmitResult);
+    return;
+  }
+
+  lastSubmitResult = {
+    accepted: true,
+    roundIndex,
+    pointsAwarded: submission.pointsAwarded,
+    accuracyPercent: submission.accuracyPercent
+  };
+
+  updateHUD(ui, state, lastSubmitResult);
+
+  if (state.status === COLOR_MATCH_STATUS.ROUND_COMPLETE) {
+    renderOverlay(
+      ui,
+      `Round ${roundIndex} Complete`,
+      `Accuracy ${submission.accuracyPercent.toFixed(1)}%. Points +${submission.pointsAwarded}.`,
+      "Start Next Round"
+    );
+    return;
+  }
+
+  if (state.status === COLOR_MATCH_STATUS.OVER) {
+    renderOverlay(
+      ui,
+      "Game Complete",
+      `Final score ${state.score}. Best score ${state.bestScore}.`,
+      "Play Again"
+    );
+  }
+}
+
+function handleNextRound() {
+  if (state.status !== COLOR_MATCH_STATUS.ROUND_COMPLETE) {
+    return;
+  }
+
+  startNextRound(state, { nowMs: performance.now() });
+  lastSubmitResult = null;
+  hideOverlay(ui);
+  updateHUD(ui, state, lastSubmitResult);
+}
+
+function handleRestartGame() {
+  beginGame();
 }
 
 function handleKeyDown(event) {
   if (event.code === "Enter") {
     event.preventDefault();
-    handleStartButton();
+
+    if (state.status === COLOR_MATCH_STATUS.RUNNING) {
+      handleSubmitRound();
+    } else if (state.status === COLOR_MATCH_STATUS.ROUND_COMPLETE) {
+      handleNextRound();
+    } else {
+      handleStartButton();
+    }
+
     return;
   }
 
-  if (event.code === "KeyP") {
-    event.preventDefault();
-
-    if (state.status === CLICKER_STATUS.RUNNING) {
-      pauseClickerGame(state);
-      updateHUD(ui, state);
-      renderOverlay(ui, "Paused", "Press P or Start to continue.", "Resume");
-      return;
-    }
-
-    if (state.status === CLICKER_STATUS.PAUSED) {
-      resumeClickerGame(state, performance.now());
-      hasShownRoundCompleteOverlay = false;
-      hideOverlay(ui);
-      updateHUD(ui, state);
-    }
-
+  if (state.status !== COLOR_MATCH_STATUS.RUNNING) {
     return;
   }
 
   if (event.code === "KeyR") {
     event.preventDefault();
-    endRound(performance.now(), "manual-stop");
+    applyChannelDelta("red", 5);
+  } else if (event.code === "KeyF") {
+    event.preventDefault();
+    applyChannelDelta("red", -5);
+  } else if (event.code === "KeyG") {
+    event.preventDefault();
+    applyChannelDelta("green", 5);
+  } else if (event.code === "KeyH") {
+    event.preventDefault();
+    applyChannelDelta("green", -5);
+  } else if (event.code === "KeyB") {
+    event.preventDefault();
+    applyChannelDelta("blue", 5);
+  } else if (event.code === "KeyN") {
+    event.preventDefault();
+    applyChannelDelta("blue", -5);
   }
 }
 
-function gameLoop(now) {
-  tickClickerGame(state, now);
+function bindChannelInputs() {
+  ui.redRange.addEventListener("input", (event) => applyChannelInput("red", event.target.value));
+  ui.greenRange.addEventListener("input", (event) => applyChannelInput("green", event.target.value));
+  ui.blueRange.addEventListener("input", (event) => applyChannelInput("blue", event.target.value));
 
-  if (state.status === CLICKER_STATUS.OVER) {
-    endRound(now, state.finalReason ?? "time-expired");
-  } else {
-    updateHUD(ui, state);
-  }
+  ui.redInput.addEventListener("change", (event) => applyChannelInput("red", event.target.value));
+  ui.greenInput.addEventListener("change", (event) => applyChannelInput("green", event.target.value));
+  ui.blueInput.addEventListener("change", (event) => applyChannelInput("blue", event.target.value));
 
-  animationFrame = window.requestAnimationFrame(gameLoop);
+  ui.redDownButton.addEventListener("click", () => applyChannelDelta("red", -5));
+  ui.redUpButton.addEventListener("click", () => applyChannelDelta("red", 5));
+  ui.greenDownButton.addEventListener("click", () => applyChannelDelta("green", -5));
+  ui.greenUpButton.addEventListener("click", () => applyChannelDelta("green", 5));
+  ui.blueDownButton.addEventListener("click", () => applyChannelDelta("blue", -5));
+  ui.blueUpButton.addEventListener("click", () => applyChannelDelta("blue", 5));
 }
 
 function initialize() {
-  ui.canvas.width = 640;
-  ui.canvas.height = 640;
-  drawClickTarget(ui.canvas);
+  bindChannelInputs();
+  ui.startButton.addEventListener("click", handleStartButton);
+  ui.submitRoundButton.addEventListener("click", handleSubmitRound);
+  ui.nextRoundButton.addEventListener("click", handleNextRound);
+  ui.restartButton.addEventListener("click", handleRestartGame);
+  window.addEventListener("keydown", handleKeyDown);
 
   renderOverlay(
     ui,
-    "Clicker Challenge",
-    "Score as many points as possible before time expires. Each click increases score.",
+    "Color Match Challenge",
+    "Start the game, adjust RGB values to match the target color, and submit each round.",
     "Start Game"
   );
-
-  updateHUD(ui, state);
-
-  ui.canvas.addEventListener("pointerdown", handleCanvasClick);
-  ui.startButton.addEventListener("click", handleStartButton);
-  window.addEventListener("keydown", handleKeyDown);
-
-  animationFrame = window.requestAnimationFrame(gameLoop);
+  updateHUD(ui, state, lastSubmitResult);
 }
-
-window.addEventListener("beforeunload", () => {
-  window.cancelAnimationFrame(animationFrame);
-});
 
 initialize();

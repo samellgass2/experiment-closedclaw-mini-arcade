@@ -620,3 +620,38 @@ Implemented standalone color matching game logic with per-channel input tracking
      - `anomaly.logic.test: ok`
      - `clicker.logic.test: ok`
      - `color-match.logic.test: ok`
+
+## Task 115 Update (RUN_ID 194)
+Implemented full color matching game UI and integrated it with existing color-match game logic.
+
+### UI Implemented
+- Replaced clicker-focused page shell with color-match interface in `index.html`:
+  - Added target and guess color swatches with live RGB labels.
+  - Added per-channel controls for red/green/blue (range slider, numeric input, +/-5 buttons).
+  - Added round actions (`Submit Guess`, `Next Round`, `Restart Game`).
+  - Added score/round/status HUD and round feedback/readout cards.
+  - Preserved overlay-driven start and post-round/game transitions.
+- Reworked styles in `css/styles.css` for the new layout:
+  - Added swatch panel, channel control rows, action row, and responsive mobile layout.
+  - Added status and verdict visual states for ready/running/round-complete/over UX.
+- Replaced runtime controller in `js/game.js`:
+  - Wired UI to `js/color-match/logic.js` (`startColorMatchGame`, `startNextRound`, `setChannelValue`, `adjustChannelValue`, `submitRound`).
+  - Added live synchronization of slider/number inputs and guess swatch rendering.
+  - Added keyboard support (`Enter`, `R/F`, `G/H`, `B/N`) for quick interaction.
+  - Added dynamic control enable/disable logic by game state.
+
+### Acceptance Coverage
+- UI displays the target color and current guess color in dedicated swatches.
+- Users can adjust RGB channels through multiple input controls.
+- Submit/next/restart interactions update score, round progress, and feedback.
+- Layout adapts for smaller screens through responsive breakpoints.
+
+### Verification (Task 115)
+1. `node --check js/game.js`
+   - Result: PASS
+2. `node tests/color-match.logic.test.mjs`
+   - Result: PASS (`color-match.logic.test: ok`)
+3. `node tests/clicker.logic.test.mjs`
+   - Result: PASS (`clicker.logic.test: ok`)
+4. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS (`anomaly.logic.test: ok`)

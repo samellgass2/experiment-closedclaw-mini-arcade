@@ -40,12 +40,13 @@ body {
 }
 
 .game-card {
-  width: min(100%, 760px);
+  width: min(100%, 860px);
   background: var(--card);
   border: 2px solid var(--line);
   border-radius: 20px;
   box-shadow: var(--shadow);
   padding: 20px;
+  position: relative;
 }
 
 .game-header {
@@ -102,7 +103,7 @@ body {
   border-color: #e2c49f;
 }
 
-.hud-item-time {
+.hud-item-round {
   background: linear-gradient(180deg, #edf7f2, #e3f2eb);
   border-color: #aac8b8;
 }
@@ -123,7 +124,7 @@ body {
 }
 
 .hud-value-emphasis {
-  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-size: clamp(1.4rem, 3vw, 2rem);
   letter-spacing: 0.6px;
   line-height: 1.05;
 }
@@ -133,24 +134,6 @@ body {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 600;
-}
-
-.timer-track {
-  width: 100%;
-  margin-top: 8px;
-  background: #d4e4dc;
-  border-radius: 999px;
-  height: 7px;
-  overflow: hidden;
-}
-
-.timer-fill {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #31a56f, #8acb4c, #efad35, #dc5a2d);
-  transition: width 140ms linear;
 }
 
 .hud-status {
@@ -163,9 +146,8 @@ body {
   min-height: 58px;
 }
 
-.hud-status.is-loading,
 .hud-status.is-ready,
-.hud-status.is-paused {
+.hud-status.is-round-complete {
   color: var(--muted);
 }
 
@@ -177,47 +159,103 @@ body {
   color: var(--danger);
 }
 
-.game-stage-wrap {
-  position: relative;
+.swatch-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
-.game-canvas {
-  width: 100%;
-  border: 2px solid #8ba89a;
-  border-radius: 14px;
-  display: block;
-  background: #ebf2ed;
-  touch-action: manipulation;
-}
-
-.overlay {
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-  gap: 12px;
-  padding: 24px;
+.swatch-card {
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(247, 251, 249, 0.92), rgba(244, 249, 246, 0.73));
+  background: #f8faf8;
+  padding: 12px;
 }
 
-.overlay.visible {
-  display: flex;
+.color-swatch {
+  width: 100%;
+  min-height: 140px;
+  border-radius: 10px;
+  border: 2px solid #8ba89a;
+  background: linear-gradient(135deg, #f0f0f0, #dbdbdb);
 }
 
-.overlay-title {
-  margin: 0;
-  font-size: clamp(1.5rem, 3vw, 2rem);
-}
-
-.overlay-message {
-  margin: 0;
+.swatch-rgb {
+  margin: 10px 0 0;
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 0.87rem;
   color: var(--muted);
-  max-width: 420px;
-  line-height: 1.35;
+}
+
+.controls-panel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8faf8;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.controls-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.channel-row {
+  display: grid;
+  grid-template-columns: 64px 56px 1fr 56px 82px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.channel-row:last-of-type {
+  margin-bottom: 12px;
+}
+
+.channel-label {
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-size: 0.78rem;
+}
+
+.channel-range {
+  width: 100%;
+}
+
+.channel-number {
+  width: 100%;
+  border: 1px solid #abc0b4;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 8px;
+  font-size: 0.9rem;
+}
+
+.channel-adjust {
+  border: 1px solid #abc0b4;
+  border-radius: 8px;
+  background: #e9f1ec;
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 6px;
+}
+
+.channel-adjust:hover,
+.channel-adjust:focus-visible {
+  background: #d9ebe2;
+  outline: 2px solid rgba(44, 132, 95, 0.3);
+  outline-offset: 1px;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .action-button {
@@ -228,8 +266,19 @@ body {
   font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 0.4px;
-  padding: 12px 20px;
+  padding: 11px 16px;
   cursor: pointer;
+}
+
+.action-button-secondary {
+  background: linear-gradient(180deg, #c4ead5, #80c9a4);
+  color: #0c3825;
+}
+
+.action-button-ghost {
+  background: #e7efea;
+  color: #27453e;
+  border: 1px solid #abc0b4;
 }
 
 .action-button:hover,
@@ -239,15 +288,18 @@ body {
   outline-offset: 2px;
 }
 
-.action-button:disabled {
-  cursor: wait;
-  opacity: 0.72;
+.action-button:disabled,
+.channel-adjust:disabled,
+.channel-number:disabled,
+.channel-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .dataset-panel {
-  margin-top: 14px;
+  margin-top: 2px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -267,7 +319,6 @@ body {
   margin: 4px 0 10px;
   color: var(--muted);
   font-size: 0.8rem;
-  min-height: 34px;
 }
 
 .metric-grid {
@@ -353,6 +404,36 @@ body {
   line-height: 1.4;
 }
 
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(247, 251, 249, 0.93), rgba(244, 249, 246, 0.76));
+}
+
+.overlay.visible {
+  display: flex;
+}
+
+.overlay-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.overlay-message {
+  margin: 0;
+  color: var(--muted);
+  max-width: 460px;
+  line-height: 1.35;
+}
+
 .game-footer {
   margin-top: 12px;
 }
@@ -385,29 +466,46 @@ kbd {
   font-weight: 700;
 }
 
-@media (max-width: 680px) {
+@media (max-width: 760px) {
   .game-card {
     padding: 16px;
   }
 
   .hud-primary,
-  .hud-secondary {
-    grid-template-columns: 1fr;
-  }
-
-  .hud-item {
-    min-height: 52px;
-  }
-
-  .hud-value-emphasis {
-    font-size: 1.75rem;
-  }
-
+  .hud-secondary,
+  .swatch-panel,
   .dataset-panel {
     grid-template-columns: 1fr;
   }
 
-  .dataset-description {
-    min-height: 0;
+  .channel-row {
+    grid-template-columns: 62px 54px 1fr 54px 74px;
+  }
+}
+
+@media (max-width: 560px) {
+  .channel-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid #d5e1d9;
+    border-radius: 10px;
+    background: #f2f7f3;
+  }
+
+  .channel-label {
+    font-size: 0.76rem;
+  }
+
+  .action-row {
+    flex-direction: column;
+  }
+
+  .action-button {
+    width: 100%;
+  }
+
+  .color-swatch {
+    min-height: 120px;
   }
 }
