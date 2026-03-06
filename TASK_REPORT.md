@@ -1,32 +1,33 @@
-# Task Report: TASK_ID 133 (RUN_ID 218)
+# Task Report: TASK_ID 141 (RUN_ID 226)
 
 ## Summary
-Updated `STATUS.md` with a dedicated persistence-layer implementation section covering architecture, behavior guarantees, game integrations, test coverage, and acceptance mapping.
+Implemented a new dashboard component as the primary interface, enabling users to add, remove, and rearrange game tiles.
 
 ## Changes
-- Appended `## Task 133 Update (RUN_ID 218)` to `STATUS.md`.
-- Documented shared persistence module responsibilities in `js/storage/score.js`:
-  - storage resolution strategy
-  - read/write normalization and fallback behavior
-  - exception-safe persistence handling
-- Documented integration points across game modules:
-  - `js/anomaly/state.js`
-  - `js/clicker/logic.js`
-  - `js/color-match/logic.js`
-  - `js/racing/logic.js`
-- Documented persistence-focused test coverage:
-  - `tests/storage.score.test.mjs`
-  - integration checks in anomaly/clicker/color-match/racing logic suites
+- Added dashboard logic module: `js/dashboard/logic.js`
+  - state creation and catalog normalization
+  - tile add/remove/rearrange operations
+  - dashboard snapshot and availability helpers
+- Added dashboard UI module: `js/dashboard/component.js`
+  - rendered dashboard shell and controls
+  - implemented add/remove/move interactions
+  - implemented drag-and-drop tile reordering
+- Added re-export module: `js/dashboard/index.js`
+- Updated app bootstrap in `js/game.js` to initialize dashboard
+- Replaced `index.html` structure with dashboard root container
+- Replaced `css/styles.css` with dashboard styling
+- Added tests: `tests/dashboard.logic.test.mjs`
 
 ## Verification
 Executed:
-`node --test tests/*.mjs`
+- `node --test tests/*.mjs`
+- `node --check js/game.js && node --check js/dashboard/logic.js && node --check js/dashboard/component.js`
 
-Result:
-- PASS (`6/6` test files)
-- Includes `storage.score.test: ok` and all game logic suites passing.
+Results:
+- PASS: all test files passed, including `dashboard.logic.test: ok`
+- PASS: syntax checks passed for updated/new dashboard modules
 
 ## Acceptance Coverage
-- Requirement: update `STATUS.md` with relevant persistence-layer implementation details.
-- Status: PASS.
-- Evidence: New Task 133 section in `STATUS.md` includes implementation details, integration mapping, and verification results.
+- Add tiles: PASS (`addDashboardTile` + UI add control)
+- Remove tiles: PASS (`removeDashboardTile` + per-tile remove control)
+- Rearrange tiles: PASS (`rearrangeDashboardTiles`, directional move controls, drag-drop reorder)

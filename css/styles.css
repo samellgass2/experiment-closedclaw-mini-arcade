@@ -1,16 +1,15 @@
 :root {
-  --bg-1: #0f2437;
-  --bg-2: #1f4f6e;
-  --card: #f3f8fc;
-  --line: #8fa8bb;
-  --ink: #102131;
-  --muted: #365166;
-  --accent: #eb5f28;
-  --accent-ink: #fff6f1;
-  --accent-soft: #ffd2bf;
-  --shadow: 0 24px 50px rgba(8, 24, 34, 0.32);
-  --safe: #1e8a57;
-  --warning: #b46610;
+  --bg-night: #0f222f;
+  --bg-deep: #102f42;
+  --card: #f7fbff;
+  --line: #8da9bc;
+  --ink: #112232;
+  --muted: #385467;
+  --accent: #e46324;
+  --accent-soft: #ffe0cf;
+  --good: #207a49;
+  --bad: #9b2e2e;
+  --shadow: 0 25px 55px rgba(7, 23, 34, 0.38);
 }
 
 * {
@@ -27,9 +26,9 @@ body {
   font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 10% 14%, rgba(255, 255, 255, 0.22), transparent 34%),
-    radial-gradient(circle at 92% 11%, rgba(255, 186, 138, 0.25), transparent 30%),
-    linear-gradient(155deg, var(--bg-1), var(--bg-2));
+    radial-gradient(circle at 8% 14%, rgba(255, 255, 255, 0.23), transparent 32%),
+    radial-gradient(circle at 92% 12%, rgba(249, 154, 102, 0.2), transparent 26%),
+    linear-gradient(158deg, var(--bg-night), var(--bg-deep));
 }
 
 .page-shell {
@@ -39,8 +38,8 @@ body {
   padding: 24px;
 }
 
-.race-card {
-  width: min(100%, 1080px);
+.dashboard-card {
+  width: min(100%, 1120px);
   border: 2px solid var(--line);
   border-radius: 20px;
   background: var(--card);
@@ -48,190 +47,174 @@ body {
   padding: 18px;
 }
 
-.race-header {
-  margin-bottom: 14px;
-}
-
-.race-title {
+.dashboard-title {
   margin: 0;
+  font-size: clamp(1.75rem, 3.6vw, 2.55rem);
   letter-spacing: 0.4px;
-  font-size: clamp(1.8rem, 3.8vw, 2.6rem);
 }
 
-.race-subtitle {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 0.95rem;
-}
-
-.hud {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.hud-item {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fdfefe;
-  min-height: 62px;
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.hud-label {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.95px;
+.dashboard-subtitle {
+  margin: 6px 0 14px;
   color: var(--muted);
 }
 
-.hud-value {
-  font-size: 1.15rem;
-  margin-top: 2px;
-}
-
-.hud-value.is-safe {
-  color: var(--safe);
-}
-
-.hud-value.is-warning {
-  color: var(--warning);
-}
-
-.canvas-wrap {
-  border: 2px solid #24455c;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #0b1923;
-}
-
-#raceCanvas {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 10;
-}
-
-.controls {
-  margin-top: 12px;
+.dashboard-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 10px;
 }
 
-.action-button {
+.dashboard-select {
+  flex: 1;
+  min-width: 220px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 11px;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+}
+
+.dashboard-select:disabled {
+  opacity: 0.6;
+}
+
+.dashboard-add-button {
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 9px 14px;
   font: inherit;
   font-weight: 700;
-  cursor: pointer;
   background: var(--accent);
-  color: var(--accent-ink);
+  color: #fff5ef;
+  cursor: pointer;
 }
 
-.action-button:hover {
+.dashboard-add-button:hover {
   filter: brightness(1.05);
 }
 
-.action-button:disabled {
-  opacity: 0.45;
+.dashboard-add-button:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.action-button-secondary {
-  background: #21506d;
-  color: #f4f9ff;
+.dashboard-status {
+  margin: 0 0 14px;
+  border-radius: 10px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  background: #f9fcff;
+  color: var(--muted);
 }
 
-.action-button-ghost {
-  background: transparent;
+.dashboard-status.is-idle {
   border-color: var(--line);
-  color: var(--ink);
 }
 
-.event-feed {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  margin-top: 12px;
-  padding: 10px;
-  background: #f9fcff;
+.dashboard-status.is-success {
+  border-color: #80b39a;
+  background: #edf8f1;
+  color: var(--good);
 }
 
-.event-title {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
+.dashboard-status.is-error {
+  border-color: #d7a7a7;
+  background: #fff2f2;
+  color: var(--bad);
 }
 
-.event-message {
-  margin: 0;
-  color: var(--muted);
-}
-
-.lap-history {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  margin-top: 12px;
-  padding: 10px;
-  background: #f9fcff;
-}
-
-.lap-history-list {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 4px;
-  color: var(--ink);
-}
-
-.lap-history-list li {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 0.95rem;
-}
-
-.lap-history-list strong {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.lap-history-empty {
-  color: var(--muted);
-}
-
-.race-footer {
-  margin-top: 12px;
-}
-
-.controls-list {
+.dashboard-grid {
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.dashboard-empty {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 16px;
   color: var(--muted);
+  background: #fcfeff;
+  text-align: center;
+}
+
+.dashboard-tile {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.9), rgba(244, 250, 255, 0.95)),
+    radial-gradient(circle at 80% 5%, var(--accent-soft), transparent 40%);
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dashboard-tile.is-dragging {
+  opacity: 0.58;
+}
+
+.dashboard-tile.is-drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+.tile-title {
+  margin: 0;
+  font-size: 1.08rem;
+}
+
+.tile-summary {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+  flex: 1;
+}
+
+.tile-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #5a7080;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.tile-controls {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tile-button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
   font-size: 0.9rem;
+  cursor: pointer;
 }
 
-kbd {
-  background: #1d3f56;
-  color: #f4f8fb;
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+.tile-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
-@media (max-width: 1100px) {
-  .hud {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+.tile-button-secondary {
+  border-color: var(--line);
+  color: var(--ink);
+  background: #fcfeff;
+}
+
+.tile-button-danger {
+  border-color: #dcb2b2;
+  background: #fff3f3;
+  color: #8f2e2e;
 }
 
 @media (max-width: 760px) {
@@ -239,17 +222,12 @@ kbd {
     padding: 10px;
   }
 
-  .race-card {
+  .dashboard-card {
     border-radius: 12px;
     padding: 12px;
   }
 
-  .hud {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .controls-list {
-    flex-direction: column;
-    gap: 6px;
+  .dashboard-grid {
+    grid-template-columns: 1fr;
   }
 }
