@@ -9,7 +9,7 @@ function initializeDashboard() {
   const component = createDashboardComponent({
     root,
     catalog: DASHBOARD_DEFAULT_CATALOG,
-    initialTileIds: ["racing", "clicker"],
+    initialTileIds: ["racing", "clicker", "flappy"],
     maxTiles: DASHBOARD_DEFAULT_CATALOG.length
   });
 

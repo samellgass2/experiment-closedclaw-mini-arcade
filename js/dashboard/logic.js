@@ -32,6 +32,13 @@ export const DASHBOARD_DEFAULT_CATALOG = [
     description: "Scan telemetry tiles and select the abnormal data record.",
     difficulty: "Hard",
     mode: "Puzzle"
+  },
+  {
+    id: "flappy",
+    name: "Cloud Hopper",
+    description: "Navigate tight pipe gaps with precise taps in this Flappy-style challenge.",
+    difficulty: "Medium",
+    mode: "Reflex"
   }
 ];
 

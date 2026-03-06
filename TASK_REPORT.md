@@ -1,45 +1,62 @@
-# Task Report: TASK_ID 142 (RUN_ID 228)
+# Task Report: TASK_ID 143 (RUN_ID 230)
 
 ## Summary
-Developed a dedicated game tile component for the dashboard that displays each game name and current score, and added score update plumbing so tile scores can be updated live.
+Integrated a Flappy Bird-like game into the dashboard so it runs directly in-browser inside a game tile and reports live score updates to the dashboard tile score.
 
 ## Changes
-- Added new tile component module: `js/dashboard/gameTile.js`
-  - `createGameTileElement(game, index, tileCount)` renders a full game tile with:
-    - game name
-    - game description and metadata
-    - `Current Score` display
-    - tile controls (move left/right, remove)
-  - `updateGameTileElementScore(tileElement, score)` updates the score view in-place.
-- Extended dashboard state logic: `js/dashboard/logic.js`
-  - added per-game score map (`scoresByTileId`)
-  - added `initialScores` support in `createDashboardState`
-  - added `updateDashboardTileScore(state, tileId, score)`
-  - updated `getDashboardSnapshot` tiles to include `score`
-- Refactored dashboard UI: `js/dashboard/component.js`
-  - switched tile rendering to use `createGameTileElement`
-  - added `setGameScore(tileId, score)` API to update score and status
-  - returns `setGameScore` from `createDashboardComponent`
-- Updated exports: `js/dashboard/index.js`
-  - now exports the new game tile module
-- Updated app bootstrap: `js/game.js`
-  - `window.__MINI_ARCADE_DASHBOARD__` now exposes `setGameScore`
-- Updated dashboard styles: `css/styles.css`
-  - added `.tile-score` and `.tile-score-value` styling
-- Expanded tests: `tests/dashboard.logic.test.mjs`
-  - validates score defaults in snapshots
-  - validates successful score updates and error behavior for missing tiles
+- Added new Flappy game module:
+  - `js/flappy/logic.js`
+    - Introduced Flappy game state/config model (`createFlappyConfig`, `createFlappyState`).
+    - Implemented core gameplay loop operations (`startFlappyGame`, `flapBird`, `stepFlappyGame`, `resetFlappyState`).
+    - Added pipe spawning, movement, collision detection, score increments, and best-score persistence.
+    - Added snapshot helper (`getFlappySnapshot`).
+  - `js/flappy/index.js`
+    - Implemented browser widget mounting for dashboard tiles (`createFlappyGameWidget`).
+    - Added canvas renderer (sky/background, pipes, bird, overlays).
+    - Added player input handling via keyboard (`Space`, `ArrowUp`) and pointer/tap.
+    - Added requestAnimationFrame loop for smooth animation and continuous simulation.
+    - Wired score events to parent callback for dashboard score syncing.
+  - `js/flappy.js`
+    - Added barrel export for flappy module.
+
+- Integrated Flappy tile into dashboard:
+  - `js/dashboard/logic.js`
+    - Added new catalog game entry:
+      - `id: "flappy"`
+      - `name: "Cloud Hopper"`
+  - `js/dashboard/component.js`
+    - Added Flappy widget mounting lifecycle for `flappy` tiles.
+    - Added controller teardown/remount handling on dashboard rerenders.
+    - Connected Flappy score callback to existing `setGameScore` dashboard API.
+  - `js/game.js`
+    - Added `flappy` to default initial dashboard tile IDs.
+
+- Added styles for embedded Flappy widget:
+  - `css/styles.css`
+    - Added `.tile-game-host`, `.flappy-shell`, `.flappy-canvas`, `.flappy-panel`, `.flappy-stat`.
+
+- Updated and expanded tests:
+  - `tests/dashboard.logic.test.mjs`
+    - Updated expectations for expanded default catalog size.
+  - `tests/flappy.logic.test.mjs` (new)
+    - Verifies flap-to-start behavior.
+    - Verifies score increments when a pipe is passed.
+    - Verifies collision transitions game to OVER.
+    - Verifies reset clears run state.
 
 ## Verification
 Executed:
-- `node --test tests/*.mjs`
-- `node --check js/dashboard/logic.js && node --check js/dashboard/component.js && node --check js/dashboard/gameTile.js && node --check js/game.js`
+- `for f in tests/*.mjs; do echo "==> $f"; node "$f"; done`
+- `node --check js/game.js && node --check js/dashboard/component.js && node --check js/dashboard/logic.js && node --check js/flappy/logic.js && node --check js/flappy/index.js`
 
 Results:
-- PASS: all tests passed
-- PASS: syntax checks passed
+- PASS: all test files completed successfully, including new `flappy.logic.test.mjs`.
+- PASS: syntax checks completed for updated/new modules.
 
 ## Acceptance Coverage
-- Each game tile displays game name: PASS (rendered via `createGameTileElement`, title in `.tile-title`)
-- Each game tile displays current score: PASS (rendered in `.tile-score-value` from snapshot score)
-- Score updates are reflected: PASS (`setGameScore` -> `updateDashboardTileScore` -> tile DOM update/snapshot update)
+- Game runs smoothly in browser:
+  - PASS: Flappy game uses `requestAnimationFrame` continuous loop and per-frame simulation in `createFlappyGameWidget`.
+- Game accepts user input:
+  - PASS: Keyboard (`Space`, `ArrowUp`) and pointer/tap input trigger flap/start behavior.
+- Game tracks score correctly:
+  - PASS: Score increments on passed pipes in `stepFlappyGame`, persists best score via storage, and synchronizes tile score through dashboard `setGameScore` callback.

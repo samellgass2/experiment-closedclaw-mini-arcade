@@ -22,7 +22,7 @@ function testCreateStateAndAvailability() {
 
   assert.deepEqual(state.tileIds, ["racing", "clicker"]);
   const available = getDashboardAvailableGames(state);
-  assert.equal(available.length, 2);
+  assert.equal(available.length, 3);
   assert.equal(available[0].id, "color-match");
   const snapshot = getDashboardSnapshot(state);
   assert.equal(snapshot.tiles[0].score, 9);
@@ -91,7 +91,7 @@ function testDirectionalMoveAndSnapshot() {
 
   const snapshot = getDashboardSnapshot(state);
   assert.equal(snapshot.tileCount, 3);
-  assert.equal(snapshot.availableCount, 1);
+  assert.equal(snapshot.availableCount, 2);
   assert.equal(snapshot.tiles[1].id, "color-match");
   assert.equal(snapshot.tiles[1].position, 1);
   assert.equal(snapshot.tiles[1].score, 0);

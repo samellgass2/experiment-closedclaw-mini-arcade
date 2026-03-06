@@ -9,6 +9,7 @@ import {
   updateDashboardTileScore
 } from "./logic.js";
 import { createGameTileElement, updateGameTileElementScore } from "./gameTile.js";
+import { createFlappyGameWidget } from "../flappy/index.js";
 
 function createNode(tagName, className, textContent = "") {
   const node = document.createElement(tagName);
@@ -124,7 +125,42 @@ export function createDashboardComponent(options = {}) {
   });
 
   const ui = createShell(root);
+  const tileGameControllers = new Map();
   let dragTileId = null;
+
+  function destroyTileGames() {
+    for (const controller of tileGameControllers.values()) {
+      if (controller && typeof controller.destroy === "function") {
+        controller.destroy();
+      }
+    }
+    tileGameControllers.clear();
+  }
+
+  function mountTileGames(snapshot) {
+    for (const tile of snapshot.tiles) {
+      if (tile.id !== "flappy") {
+        continue;
+      }
+
+      const tileElement = ui.tileList.querySelector(`.dashboard-tile[data-tile-id="${tile.id}"]`);
+      if (!(tileElement instanceof HTMLElement)) {
+        continue;
+      }
+
+      const host = createNode("div", "tile-game-host");
+      tileElement.append(host);
+
+      const controller = createFlappyGameWidget({
+        root: host,
+        onScoreChange(score) {
+          setGameScore(tile.id, score);
+        }
+      });
+
+      tileGameControllers.set(tile.id, controller);
+    }
+  }
 
   function notifyChange() {
     if (typeof options.onChange === "function") {
@@ -133,6 +169,7 @@ export function createDashboardComponent(options = {}) {
   }
 
   function render() {
+    destroyTileGames();
     const snapshot = getDashboardSnapshot(state);
     updateStatusBanner(ui.status, snapshot);
     updateAddControls(ui.addButton, ui.select, snapshot);
@@ -148,6 +185,7 @@ export function createDashboardComponent(options = {}) {
       ui.tileList.append(createGameTileElement(tile, tile.position, snapshot.tileCount));
     }
 
+    mountTileGames(snapshot);
     notifyChange();
     return snapshot;
   }
@@ -324,6 +362,7 @@ export function createDashboardComponent(options = {}) {
     state,
     render,
     getSnapshot: () => getDashboardSnapshot(state),
-    setGameScore
+    setGameScore,
+    destroy: destroyTileGames
   };
 }
