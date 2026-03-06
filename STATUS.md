@@ -864,3 +864,51 @@ Implemented core racing mechanics for the top-down racing game so keyboard contr
    - Satisfied by `js/racing/controls.js` keyboard mapping, `js/game.js` keydown/keyup integration, and input reset safeguards.
 2. Icon moves around the circular track correctly:
    - Satisfied by track-relative movement and lap crossing logic in `js/racing/logic.js`, plus passing movement/lap tests in `tests/racing.logic.test.mjs`.
+
+## Task 127 Update (RUN_ID 207)
+Updated status documentation for the active top-down racing workflow to reflect implemented features and concrete next development steps.
+
+### Current Top-Down Racing Game Progress
+- Core racing gameplay loop is implemented and playable:
+  - State lifecycle: `READY` -> `RUNNING` -> `PAUSED` -> `OVER`
+  - Frame-based simulation with deterministic tick clamping in `tickRace()`
+  - Start, pause/resume, and reset control flow wired through `js/game.js`
+- Vehicle and track simulation are implemented in `js/racing/logic.js`:
+  - Elliptical track model with centerline lane geometry and start-line crossing checks
+  - Keyboard-driven throttle/brake/steer controls mapped from arrows and WASD
+  - Lane offset steering model with lane-centering and off-track drag/grip penalties
+  - Forward lap detection with minimum lap-time guard and lap-target race completion
+- Session timing and progression data are implemented:
+  - Elapsed race timer and current lap timer update every running tick
+  - Per-lap history (`lapTimesMs`), `lastLapMs`, and `bestLapMs` tracking
+  - Best lap persistence through `localStorage`
+- Rendering and HUD integration are implemented in `js/racing/renderer.js`:
+  - Canvas rendering for background, oval track, start line, and player car
+  - Ready-state overlay prompt and event message output
+  - HUD values for status, laps, timers, speed, track state, and lap history
+- Test coverage for racing behavior is implemented:
+  - `tests/racing.logic.test.mjs` verifies state transitions, movement, lap completion, steering/lane behavior, timers, snapshot output, and best-lap persistence path
+  - `tests/racing.controls.test.mjs` verifies keyboard input mapping and full-input release patch behavior
+
+### Next Steps
+1. Add AI opponents and overtake/race-position tracking to move beyond solo time trial gameplay.
+2. Introduce collision handling against track boundaries and opponent vehicles with clearer penalty feedback.
+3. Add richer race UX (countdown lights, finish summary panel, and optional ghost lap replay).
+4. Expand balancing/configuration support (difficulty presets, lap target selector, and speed/handling tuning).
+5. Add mobile/touch control support and accessibility options for non-keyboard play.
+
+### Verification (Task 127)
+1. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs && node tests/racing.controls.test.mjs && node tests/racing.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
+     - `racing.controls.test: ok`
+     - `racing.logic.test: ok`
+
+### Acceptance Mapping (Task 127)
+1. `STATUS.md` is updated with latest top-down racing game progress:
+   - PASS: This section documents implemented racing systems (state loop, controls, simulation, rendering, HUD, and tests).
+2. `STATUS.md` includes next steps:
+   - PASS: A prioritized next-steps list is included for upcoming racing development work.
