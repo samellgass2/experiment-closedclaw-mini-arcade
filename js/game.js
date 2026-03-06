@@ -33,6 +33,8 @@ function createUIBindings() {
     roundValue: queryRequiredElement("roundValue"),
     roundMetaValue: queryRequiredElement("roundMetaValue"),
     adjustmentsValue: queryRequiredElement("adjustmentsValue"),
+    averageAccuracyValue: queryRequiredElement("averageAccuracyValue"),
+    streakValue: queryRequiredElement("streakValue"),
     accuracyValue: queryRequiredElement("accuracyValue"),
     statusValue: queryRequiredElement("statusValue"),
     eventFeedValue: queryRequiredElement("eventFeedValue"),
@@ -44,10 +46,13 @@ function createUIBindings() {
     selectedTemperatureValue: queryRequiredElement("selectedTemperatureValue"),
     selectedLatencyValue: queryRequiredElement("selectedLatencyValue"),
     selectedErrorRateValue: queryRequiredElement("selectedErrorRateValue"),
+    scoreBreakdownValue: queryRequiredElement("scoreBreakdownValue"),
     deviationTemperatureValue: queryRequiredElement("deviationTemperatureValue"),
     deviationLatencyValue: queryRequiredElement("deviationLatencyValue"),
     deviationErrorRateValue: queryRequiredElement("deviationErrorRateValue"),
     selectionVerdictValue: queryRequiredElement("selectionVerdictValue"),
+    feedbackDetailValue: queryRequiredElement("feedbackDetailValue"),
+    feedbackTagsValue: queryRequiredElement("feedbackTagsValue"),
     redRange: queryRequiredElement("redRange"),
     greenRange: queryRequiredElement("greenRange"),
     blueRange: queryRequiredElement("blueRange"),
@@ -162,6 +167,21 @@ function setControlsEnabled(ui, enabled) {
   }
 }
 
+function summarizeScoreBreakdown(result) {
+  if (!result?.scoreBreakdown) {
+    return "--";
+  }
+
+  const {
+    basePoints,
+    accuracyBonus,
+    adjustmentBonus,
+    speedBonus,
+    adjustmentPenalty
+  } = result.scoreBreakdown;
+  return `Base ${basePoints} + Bonus ${accuracyBonus + adjustmentBonus + speedBonus} - Penalty ${adjustmentPenalty}`;
+}
+
 function updateFeedback(ui, snapshot, lastSubmitResult) {
   ui.selectedErrorRateValue.textContent = String(snapshot.score);
   ui.deviationTemperatureValue.textContent = String(snapshot.inputSummary.totalAdjustments);
@@ -173,22 +193,32 @@ function updateFeedback(ui, snapshot, lastSubmitResult) {
     ui.deviationErrorRateValue.textContent = "RGB(--, --, --)";
   }
 
-  if (!lastSubmitResult) {
+  const latestResult = snapshot.latestRoundResult ?? lastSubmitResult;
+
+  if (!latestResult) {
     ui.selectedCellLabel.textContent = "Submit a guess to score points.";
     ui.selectedTemperatureValue.textContent = "--";
     ui.selectedLatencyValue.textContent = "--";
+    ui.scoreBreakdownValue.textContent = "--";
     ui.selectionVerdictValue.textContent = "Awaiting input";
     ui.selectionVerdictValue.classList.remove("is-correct", "is-wrong");
     ui.selectionVerdictValue.classList.add("is-pending");
+    ui.feedbackDetailValue.textContent = "Submit a round to view scoring feedback.";
+    ui.feedbackTagsValue.textContent = "Balanced round";
     return;
   }
 
-  ui.selectedCellLabel.textContent = `Round ${lastSubmitResult.roundIndex} submitted.`;
-  ui.selectedTemperatureValue.textContent = `${lastSubmitResult.accuracyPercent.toFixed(2)}%`;
-  ui.selectedLatencyValue.textContent = String(lastSubmitResult.pointsAwarded);
+  ui.selectedCellLabel.textContent = `Round ${latestResult.index ?? lastSubmitResult?.roundIndex ?? snapshot.roundsPlayed} submitted.`;
+  ui.selectedTemperatureValue.textContent = `${latestResult.accuracyPercent.toFixed(2)}%`;
+  ui.selectedLatencyValue.textContent = String(latestResult.pointsAwarded);
+  ui.scoreBreakdownValue.textContent = summarizeScoreBreakdown(latestResult);
+  ui.feedbackDetailValue.textContent = latestResult.feedback?.detail ?? "Review your adjustments and try again.";
+  ui.feedbackTagsValue.textContent = latestResult.feedback?.tags?.join(" | ") ?? "Balanced round";
 
-  if (lastSubmitResult.accepted) {
-    ui.selectionVerdictValue.textContent = `Scored +${lastSubmitResult.pointsAwarded}`;
+  if (latestResult.pointsAwarded > 0) {
+    ui.selectionVerdictValue.textContent = latestResult.feedback?.headline
+      ? `${latestResult.feedback.headline}: +${latestResult.pointsAwarded}`
+      : `Scored +${latestResult.pointsAwarded}`;
     ui.selectionVerdictValue.classList.remove("is-pending", "is-wrong");
     ui.selectionVerdictValue.classList.add("is-correct");
   } else {
@@ -208,9 +238,13 @@ function updateHUD(ui, state, lastSubmitResult = null) {
   ui.roundValue.textContent = `${currentRoundIndex} / ${roundsTotal}`;
   ui.roundMetaValue.textContent = `Rounds remaining: ${snapshot.roundsRemaining}`;
   ui.adjustmentsValue.textContent = String(snapshot.inputSummary.totalAdjustments);
+  ui.averageAccuracyValue.textContent = `${snapshot.performanceSummary.averageAccuracy.toFixed(1)}%`;
+  ui.streakValue.textContent = `${snapshot.performanceSummary.currentNearStreak} (best ${snapshot.performanceSummary.bestNearStreak})`;
   ui.accuracyValue.textContent = lastSubmitResult
     ? `${lastSubmitResult.accuracyPercent.toFixed(1)}%`
-    : "--";
+    : snapshot.latestRoundResult
+      ? `${snapshot.latestRoundResult.accuracyPercent.toFixed(1)}%`
+      : "--";
   ui.statusValue.textContent = snapshot.status;
 
   updateStatusClass(ui, snapshot.status);
@@ -223,7 +257,9 @@ function updateHUD(ui, state, lastSubmitResult = null) {
   } else if (snapshot.status === COLOR_MATCH_STATUS.RUNNING) {
     ui.eventFeedValue.textContent = "Adjust RGB controls, then submit your guess.";
   } else if (snapshot.status === COLOR_MATCH_STATUS.ROUND_COMPLETE) {
-    ui.eventFeedValue.textContent = "Round complete. Review your score and continue to the next round.";
+    const latest = snapshot.latestRoundResult;
+    const headline = latest?.feedback?.headline ?? "Round complete";
+    ui.eventFeedValue.textContent = `${headline}. Review your score breakdown and continue to the next round.`;
   } else {
     ui.eventFeedValue.textContent = `Game over (${snapshot.finalReason ?? "completed"}). Final score: ${snapshot.score}.`;
   }
@@ -293,10 +329,11 @@ function handleSubmitRound() {
   }
 
   lastSubmitResult = {
-    accepted: true,
-    roundIndex,
+    index: roundIndex,
     pointsAwarded: submission.pointsAwarded,
-    accuracyPercent: submission.accuracyPercent
+    accuracyPercent: submission.accuracyPercent,
+    scoreBreakdown: submission.scoreBreakdown,
+    feedback: submission.feedback
   };
 
   updateHUD(ui, state, lastSubmitResult);

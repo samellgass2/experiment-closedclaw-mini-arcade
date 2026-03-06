@@ -33,6 +33,14 @@
             <strong id="adjustmentsValue" class="hud-value">0</strong>
           </div>
           <div class="hud-item hud-item-compact">
+            <span class="hud-label">Avg Accuracy</span>
+            <strong id="averageAccuracyValue" class="hud-value">0.0%</strong>
+          </div>
+          <div class="hud-item hud-item-compact">
+            <span class="hud-label">Near Streak</span>
+            <strong id="streakValue" class="hud-value">0</strong>
+          </div>
+          <div class="hud-item hud-item-compact">
             <span class="hud-label">Last Accuracy</span>
             <strong id="accuracyValue" class="hud-value">--</strong>
           </div>
@@ -107,6 +115,10 @@
               <dt>Total Score</dt>
               <dd id="selectedErrorRateValue">0</dd>
             </div>
+            <div class="metric-row">
+              <dt>Score Breakdown</dt>
+              <dd id="scoreBreakdownValue">--</dd>
+            </div>
           </dl>
         </article>
 
@@ -128,6 +140,8 @@
             </div>
           </dl>
           <p id="selectionVerdictValue" class="selection-verdict is-pending">Awaiting input</p>
+          <p id="feedbackDetailValue" class="feedback-detail">Submit a round to view scoring feedback.</p>
+          <p id="feedbackTagsValue" class="feedback-tags">Balanced round</p>
         </article>
       </section>
 

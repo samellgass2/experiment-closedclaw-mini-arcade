@@ -11,7 +11,8 @@ import {
   finishColorMatchGame,
   getColorMatchSnapshot,
   calculateAccuracyPercent,
-  calculateRoundScore
+  calculateRoundScore,
+  calculateRoundScoreDetails
 } from "../js/color-match/logic.js";
 
 function createMemoryStorage() {
@@ -84,11 +85,34 @@ function testScoreAccuracyOrdering() {
   const exactScore = calculateRoundScore(exactAccuracy, config);
   const nearScore = calculateRoundScore(nearAccuracy, config);
   const weakScore = calculateRoundScore(weakAccuracy, config);
+  const fastFewAdjustments = calculateRoundScoreDetails(exactAccuracy, config, {
+    totalAdjustments: 0,
+    durationMs: 1200
+  });
+  const slowManyAdjustments = calculateRoundScoreDetails(exactAccuracy, config, {
+    totalAdjustments: 24,
+    durationMs: 20000
+  });
 
   assert.equal(exactAccuracy, 100);
   assert.equal(exactScore, 1150, "exact match should include exact bonus");
   assert.equal(nearAccuracy > weakAccuracy, true, "near guess should be more accurate than weak guess");
   assert.equal(nearScore > weakScore, true, "higher accuracy should award more points");
+  assert.equal(
+    fastFewAdjustments.points > slowManyAdjustments.points,
+    true,
+    "faster rounds with fewer adjustments should score higher"
+  );
+  assert.equal(
+    fastFewAdjustments.breakdown.speedBonus > 0,
+    true,
+    "speed bonus should apply for quick rounds"
+  );
+  assert.equal(
+    slowManyAdjustments.breakdown.adjustmentPenalty > 0,
+    true,
+    "adjustment penalty should apply for heavy input churn"
+  );
 }
 
 function testRoundSubmissionProgressionAndBestScore() {
@@ -108,7 +132,13 @@ function testRoundSubmissionProgressionAndBestScore() {
   });
   const firstRound = submitRound(state, 1200);
   assert.equal(firstRound.accepted, true);
-  assert.equal(firstRound.pointsAwarded, 1150, "perfect match should maximize round score");
+  assert.equal(
+    firstRound.pointsAwarded,
+    1279,
+    "perfect, fast, zero-adjustment rounds should include performance bonuses"
+  );
+  assert.equal(firstRound.feedback.headline, "Perfect match");
+  assert.equal(firstRound.accuracyBand, "exact");
   assert.equal(state.status, COLOR_MATCH_STATUS.ROUND_COMPLETE);
   assert.equal(state.roundsPlayed, 1);
 
@@ -119,9 +149,16 @@ function testRoundSubmissionProgressionAndBestScore() {
   setChannelValue(state, "red", 255, 1310);
   setChannelValue(state, "green", 0, 1320);
   setChannelValue(state, "blue", 0, 1330);
+  adjustChannelValue(state, "green", 10, 1332);
+  adjustChannelValue(state, "green", -10, 1334);
+  adjustChannelValue(state, "blue", 10, 1336);
+  adjustChannelValue(state, "blue", -10, 1338);
+  adjustChannelValue(state, "red", -5, 1340);
+  adjustChannelValue(state, "red", 5, 1342);
   const secondRound = submitRound(state, 1400);
 
   assert.equal(secondRound.accepted, true);
+  assert.equal(secondRound.scoreBreakdown.adjustmentPenalty > 0, true);
   assert.equal(state.status, COLOR_MATCH_STATUS.OVER, "state should end after configured round count");
   assert.equal(state.finalReason, "completed");
   assert.equal(storage.getItem("color-match-test-best"), String(state.score), "best score should persist at game end");
@@ -150,6 +187,8 @@ function testSnapshotShape() {
   assert.equal(snapshot.currentRound.targetColor.red, 10);
   assert.equal(snapshot.currentRound.guessColor.red, 11);
   assert.equal(snapshot.currentRound.totalAdjustments, 1);
+  assert.equal(snapshot.performanceSummary.averageAccuracy, 0);
+  assert.equal(snapshot.latestRoundResult, null);
 
   finishColorMatchGame(state, 99, "manual-stop");
   const overSnapshot = getColorMatchSnapshot(state);

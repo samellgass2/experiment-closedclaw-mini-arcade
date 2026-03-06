@@ -82,7 +82,7 @@ body {
 
 .hud-secondary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -382,6 +382,20 @@ body {
   border-color: #d4938c;
   color: #7a221c;
   background: #f7e3e1;
+}
+
+.feedback-detail {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.feedback-tags {
+  margin: 6px 0 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #23443e;
 }
 
 .event-feed {

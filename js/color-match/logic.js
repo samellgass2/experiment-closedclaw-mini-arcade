@@ -14,6 +14,12 @@ export const COLOR_MATCH_DEFAULTS = {
   nearMatchThreshold: 95,
   nearMatchBonus: 50,
   exactMatchBonus: 150,
+  perfectAdjustmentBonus: 40,
+  freeAdjustments: 5,
+  adjustmentPenaltyStep: 6,
+  maxAdjustmentPenalty: 150,
+  fastRoundThresholdMs: 12000,
+  maxSpeedBonus: 90,
   bestScoreStorageKey: "color-match-best-score"
 };
 
@@ -134,6 +140,36 @@ export function createColorMatchConfig(overrides = {}) {
       overrides.exactMatchBonus,
       COLOR_MATCH_DEFAULTS.exactMatchBonus,
       0
+    ),
+    perfectAdjustmentBonus: sanitizeInteger(
+      overrides.perfectAdjustmentBonus,
+      COLOR_MATCH_DEFAULTS.perfectAdjustmentBonus,
+      0
+    ),
+    freeAdjustments: sanitizeInteger(
+      overrides.freeAdjustments,
+      COLOR_MATCH_DEFAULTS.freeAdjustments,
+      0
+    ),
+    adjustmentPenaltyStep: sanitizeInteger(
+      overrides.adjustmentPenaltyStep,
+      COLOR_MATCH_DEFAULTS.adjustmentPenaltyStep,
+      0
+    ),
+    maxAdjustmentPenalty: sanitizeInteger(
+      overrides.maxAdjustmentPenalty,
+      COLOR_MATCH_DEFAULTS.maxAdjustmentPenalty,
+      0
+    ),
+    fastRoundThresholdMs: sanitizeInteger(
+      overrides.fastRoundThresholdMs,
+      COLOR_MATCH_DEFAULTS.fastRoundThresholdMs,
+      1
+    ),
+    maxSpeedBonus: sanitizeInteger(
+      overrides.maxSpeedBonus,
+      COLOR_MATCH_DEFAULTS.maxSpeedBonus,
+      0
     )
   };
 }
@@ -143,13 +179,16 @@ function createRoundState(state, targetColor, startedAtMs) {
     index: state.roundsPlayed + 1,
     startedAtMs: sanitizeNumber(startedAtMs, 0, 0),
     submittedAtMs: null,
+    durationMs: 0,
     targetColor: copyColor(targetColor),
     guessColor: copyColor(state.config.startingGuess),
     adjustments: [],
     adjustmentCounts: { red: 0, green: 0, blue: 0 },
     totalAdjustments: 0,
     accuracyPercent: null,
-    pointsAwarded: 0
+    pointsAwarded: 0,
+    scoreBreakdown: null,
+    feedback: null
   };
 }
 
@@ -168,6 +207,86 @@ function finalizeBestScore(state) {
 
   state.bestScore = state.score;
   writeBestScore(state.storage, state.config.bestScoreStorageKey, state.bestScore);
+}
+
+function calculateSpeedBonus(durationMs, config) {
+  if (!Number.isFinite(durationMs) || durationMs <= 0 || config.fastRoundThresholdMs <= 0) {
+    return 0;
+  }
+
+  const remaining = Math.max(0, config.fastRoundThresholdMs - durationMs);
+  const ratio = remaining / config.fastRoundThresholdMs;
+  return Math.round(ratio * config.maxSpeedBonus);
+}
+
+function calculateAdjustmentPenalty(totalAdjustments, config) {
+  const extraAdjustments = Math.max(0, totalAdjustments - config.freeAdjustments);
+  const rawPenalty = extraAdjustments * config.adjustmentPenaltyStep;
+  return clamp(rawPenalty, 0, config.maxAdjustmentPenalty);
+}
+
+function calculateAdjustmentBonus(totalAdjustments, config) {
+  return totalAdjustments === 0 ? config.perfectAdjustmentBonus : 0;
+}
+
+function resolveAccuracyBand(accuracyPercent, nearMatchThreshold) {
+  if (accuracyPercent >= 100) {
+    return "exact";
+  }
+
+  if (accuracyPercent >= nearMatchThreshold) {
+    return "near";
+  }
+
+  if (accuracyPercent >= 80) {
+    return "strong";
+  }
+
+  if (accuracyPercent >= 60) {
+    return "fair";
+  }
+
+  return "off";
+}
+
+function createRoundFeedback(summary) {
+  const { accuracyBand, adjustmentPenalty, speedBonus, totalAdjustments, durationMs } = summary;
+
+  let headline = "Keep tuning";
+  let detail = "Refine the channels and try to get closer.";
+
+  if (accuracyBand === "exact") {
+    headline = "Perfect match";
+    detail = "All channels align exactly with the target color.";
+  } else if (accuracyBand === "near") {
+    headline = "Near match";
+    detail = "You were very close. A tiny channel adjustment could perfect it.";
+  } else if (accuracyBand === "strong") {
+    headline = "Solid accuracy";
+    detail = "Good alignment overall. Focus on the largest color gap next round.";
+  } else if (accuracyBand === "fair") {
+    headline = "On track";
+    detail = "Some channels are close. Keep refining values to improve precision.";
+  }
+
+  const tags = [];
+  if (speedBonus > 0) {
+    tags.push(`Speed bonus +${speedBonus}`);
+  }
+  if (adjustmentPenalty > 0) {
+    tags.push(`Adjustment penalty -${adjustmentPenalty}`);
+  }
+  if (!tags.length) {
+    tags.push("Balanced round");
+  }
+
+  return {
+    headline,
+    detail,
+    tags,
+    adjustmentNote: `${totalAdjustments} adjustments`,
+    durationNote: `${Math.round(durationMs)} ms`
+  };
 }
 
 export function createColorMatchState(configOverrides = {}, runtime = {}) {
@@ -190,6 +309,12 @@ export function createColorMatchState(configOverrides = {}, runtime = {}) {
       greenAdjustments: 0,
       blueAdjustments: 0
     },
+    performanceSummary: {
+      averageAccuracy: 0,
+      bestAccuracy: 0,
+      currentNearStreak: 0,
+      bestNearStreak: 0
+    },
     startedAtMs: null,
     endedAtMs: null,
     finalReason: null
@@ -206,6 +331,10 @@ export function resetColorMatchState(state) {
   state.inputSummary.redAdjustments = 0;
   state.inputSummary.greenAdjustments = 0;
   state.inputSummary.blueAdjustments = 0;
+  state.performanceSummary.averageAccuracy = 0;
+  state.performanceSummary.bestAccuracy = 0;
+  state.performanceSummary.currentNearStreak = 0;
+  state.performanceSummary.bestNearStreak = 0;
   state.startedAtMs = null;
   state.endedAtMs = null;
   state.finalReason = null;
@@ -226,18 +355,79 @@ export function calculateAccuracyPercent(targetColor, guessColor, channelMax = 2
   return normalized * 100;
 }
 
-export function calculateRoundScore(accuracyPercent, config) {
+export function calculateRoundScoreDetails(accuracyPercent, config, performance = {}) {
+  const scoringConfig = { ...COLOR_MATCH_DEFAULTS, ...(config ?? {}) };
   const safeAccuracy = clamp(accuracyPercent, 0, 100);
-  const basePoints = Math.round((safeAccuracy / 100) * config.maxPointsPerRound);
-  let bonus = 0;
+  const basePoints = Math.round((safeAccuracy / 100) * scoringConfig.maxPointsPerRound);
 
+  let accuracyBonus = 0;
   if (safeAccuracy >= 100) {
-    bonus += config.exactMatchBonus;
-  } else if (safeAccuracy >= config.nearMatchThreshold) {
-    bonus += config.nearMatchBonus;
+    accuracyBonus += scoringConfig.exactMatchBonus;
+  } else if (safeAccuracy >= scoringConfig.nearMatchThreshold) {
+    accuracyBonus += scoringConfig.nearMatchBonus;
   }
 
-  return basePoints + bonus;
+  const totalAdjustments = sanitizeInteger(
+    performance.totalAdjustments,
+    scoringConfig.freeAdjustments,
+    0
+  );
+  const durationMs = sanitizeNumber(
+    performance.durationMs,
+    scoringConfig.fastRoundThresholdMs,
+    0
+  );
+
+  const adjustmentBonus = calculateAdjustmentBonus(totalAdjustments, scoringConfig);
+  const adjustmentPenalty = calculateAdjustmentPenalty(totalAdjustments, scoringConfig);
+  const speedBonus = calculateSpeedBonus(durationMs, scoringConfig);
+
+  const totalPoints = Math.max(
+    0,
+    basePoints + accuracyBonus + adjustmentBonus + speedBonus - adjustmentPenalty
+  );
+
+  return {
+    points: totalPoints,
+    breakdown: {
+      basePoints,
+      accuracyBonus,
+      adjustmentBonus,
+      speedBonus,
+      adjustmentPenalty,
+      totalAdjustments,
+      durationMs
+    }
+  };
+}
+
+export function calculateRoundScore(accuracyPercent, config, performance = {}) {
+  return calculateRoundScoreDetails(accuracyPercent, config, performance).points;
+}
+
+function updatePerformanceSummary(state, accuracyPercent) {
+  const safeAccuracy = clamp(accuracyPercent, 0, 100);
+  const previousRounds = state.roundsPlayed - 1;
+  const previousAverage = state.performanceSummary.averageAccuracy;
+
+  state.performanceSummary.averageAccuracy = previousRounds >= 0
+    ? ((previousAverage * previousRounds) + safeAccuracy) / Math.max(1, state.roundsPlayed)
+    : safeAccuracy;
+
+  state.performanceSummary.bestAccuracy = Math.max(
+    state.performanceSummary.bestAccuracy,
+    safeAccuracy
+  );
+
+  if (safeAccuracy >= state.config.nearMatchThreshold) {
+    state.performanceSummary.currentNearStreak += 1;
+    state.performanceSummary.bestNearStreak = Math.max(
+      state.performanceSummary.bestNearStreak,
+      state.performanceSummary.currentNearStreak
+    );
+  } else {
+    state.performanceSummary.currentNearStreak = 0;
+  }
 }
 
 export function startColorMatchGame(state, options = {}) {
@@ -297,7 +487,11 @@ function applyChannelChange(state, channel, targetValue, nowMs, mode, rawValue) 
     return { accepted: false, reason: "invalid-channel" };
   }
 
-  const roundedTarget = sanitizeInteger(targetValue, state.currentRound.guessColor[channelName], Number.NEGATIVE_INFINITY);
+  const roundedTarget = sanitizeInteger(
+    targetValue,
+    state.currentRound.guessColor[channelName],
+    Number.NEGATIVE_INFINITY
+  );
   const clampedTarget = clamp(roundedTarget, state.config.channelMin, state.config.channelMax);
   const previousValue = state.currentRound.guessColor[channelName];
   state.currentRound.guessColor[channelName] = clampedTarget;
@@ -336,24 +530,48 @@ export function submitRound(state, nowMs = 0) {
     return { accepted: false, reason: "round-not-running" };
   }
 
+  const submittedAtMs = sanitizeNumber(nowMs, 0, 0);
+  const durationMs = Math.max(0, submittedAtMs - state.currentRound.startedAtMs);
+
   const accuracy = calculateAccuracyPercent(
     state.currentRound.targetColor,
     state.currentRound.guessColor,
     state.config.channelMax
   );
-  const pointsAwarded = calculateRoundScore(accuracy, state.config);
+  const scoreResult = calculateRoundScoreDetails(accuracy, state.config, {
+    totalAdjustments: state.currentRound.totalAdjustments,
+    durationMs
+  });
+  const pointsAwarded = scoreResult.points;
 
   state.currentRound.accuracyPercent = accuracy;
   state.currentRound.pointsAwarded = pointsAwarded;
-  state.currentRound.submittedAtMs = sanitizeNumber(nowMs, 0, 0);
+  state.currentRound.submittedAtMs = submittedAtMs;
+  state.currentRound.durationMs = durationMs;
+
+  const accuracyBand = resolveAccuracyBand(accuracy, state.config.nearMatchThreshold);
+  const feedback = createRoundFeedback({
+    accuracyBand,
+    adjustmentPenalty: scoreResult.breakdown.adjustmentPenalty,
+    speedBonus: scoreResult.breakdown.speedBonus,
+    totalAdjustments: state.currentRound.totalAdjustments,
+    durationMs
+  });
+
+  state.currentRound.scoreBreakdown = {
+    ...scoreResult.breakdown,
+    accuracyBand
+  };
+  state.currentRound.feedback = feedback;
 
   state.score += pointsAwarded;
   state.roundsPlayed += 1;
   state.roundHistory.push(state.currentRound);
+  updatePerformanceSummary(state, accuracy);
   state.currentRound = null;
 
   if (state.roundsPlayed >= state.config.roundsPerGame) {
-    finishColorMatchGame(state, nowMs, "completed");
+    finishColorMatchGame(state, submittedAtMs, "completed");
   } else {
     state.status = COLOR_MATCH_STATUS.ROUND_COMPLETE;
   }
@@ -363,7 +581,11 @@ export function submitRound(state, nowMs = 0) {
     pointsAwarded,
     accuracyPercent: accuracy,
     totalScore: state.score,
-    roundsPlayed: state.roundsPlayed
+    roundsPlayed: state.roundsPlayed,
+    durationMs,
+    feedback,
+    scoreBreakdown: scoreResult.breakdown,
+    accuracyBand
   };
 }
 
@@ -376,6 +598,32 @@ export function finishColorMatchGame(state, nowMs = 0, reason = "manual-stop") {
   return state;
 }
 
+function mapRoundForSnapshot(round) {
+  if (!round) {
+    return null;
+  }
+
+  return {
+    index: round.index,
+    targetColor: copyColor(round.targetColor),
+    guessColor: copyColor(round.guessColor),
+    totalAdjustments: round.totalAdjustments,
+    accuracyPercent: round.accuracyPercent,
+    pointsAwarded: round.pointsAwarded,
+    durationMs: round.durationMs,
+    scoreBreakdown: round.scoreBreakdown ? { ...round.scoreBreakdown } : null,
+    feedback: round.feedback
+      ? {
+          headline: round.feedback.headline,
+          detail: round.feedback.detail,
+          tags: [...round.feedback.tags],
+          adjustmentNote: round.feedback.adjustmentNote,
+          durationNote: round.feedback.durationNote
+        }
+      : null
+  };
+}
+
 export function getColorMatchSnapshot(state) {
   return {
     status: state.status,
@@ -385,13 +633,13 @@ export function getColorMatchSnapshot(state) {
     roundsRemaining: Math.max(0, state.config.roundsPerGame - state.roundsPlayed),
     finalReason: state.finalReason,
     inputSummary: { ...state.inputSummary },
-    currentRound: state.currentRound
-      ? {
-          index: state.currentRound.index,
-          targetColor: copyColor(state.currentRound.targetColor),
-          guessColor: copyColor(state.currentRound.guessColor),
-          totalAdjustments: state.currentRound.totalAdjustments
-        }
-      : null
+    performanceSummary: {
+      averageAccuracy: state.performanceSummary.averageAccuracy,
+      bestAccuracy: state.performanceSummary.bestAccuracy,
+      currentNearStreak: state.performanceSummary.currentNearStreak,
+      bestNearStreak: state.performanceSummary.bestNearStreak
+    },
+    currentRound: mapRoundForSnapshot(state.currentRound),
+    latestRoundResult: mapRoundForSnapshot(state.roundHistory[state.roundHistory.length - 1] ?? null)
   };
 }
