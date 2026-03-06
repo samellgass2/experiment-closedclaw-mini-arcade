@@ -1133,3 +1133,48 @@ Implemented a new dashboard component as the main interface for composing game t
    - PASS: per-tile remove control + `removeDashboardTile` workflow implemented and tested.
 3. Users can rearrange game tiles on the dashboard:
    - PASS: left/right move controls and drag-drop reorder + `rearrangeDashboardTiles` workflow implemented and tested.
+
+## Task 160 Update (RUN_ID 255)
+Documented the latest user interface enhancement cycle for the dashboard, covering Tasks `157`, `158`, and `159`.
+
+### UI Enhancements Implemented
+- Dashboard layout and reordering UX (`task/157`):
+  - Introduced a two-panel composition (`Catalog Controls` + `Active Board`) for clearer navigation of actions vs active tiles.
+  - Added live board capacity messaging (`current/max`) to make tile limits explicit.
+  - Reworked drag-and-drop into insertion-slot targeting so users can place tiles at first, middle, or last positions predictably.
+  - Added `repositionDashboardTile(...)` in dashboard logic for deterministic insertion-index moves.
+- Game tile readability and score clarity (`task/158`):
+  - Improved tile text normalization and accessibility labeling to handle missing/blank game metadata safely.
+  - Elevated game name prominence and contrast in tile headers.
+  - Added a dedicated score badge (`.tile-score-badge`) and stronger score-value styling to keep current scores visible at a glance.
+  - Tuned responsive tile header behavior for narrow/mobile layouts so name and score remain readable.
+- Interaction feedback cues (`task/159`):
+  - Added a `Recent Actions` feedback stream (`dashboard-feedback-list`) showing add/remove/move/update outcomes.
+  - Added unified action feedback handling so all tile operations emit consistent success/error/neutral status signals.
+  - Added board-level and tile-level visual cues (pulse/highlight classes) to confirm interaction results quickly.
+  - Added reduced-motion handling for feedback animations to respect user motion preferences.
+
+### Files Updated Across UI Enhancement Tasks
+- `js/dashboard/component.js`
+- `js/dashboard/gameTile.js`
+- `js/dashboard/logic.js`
+- `css/styles.css`
+- `tests/dashboard.logic.test.mjs`
+
+### Verification (Task 160)
+1. `node --test tests/*.mjs`
+   - Result: PASS
+   - Output summary:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
+     - `dashboard.logic.test: ok`
+     - `racing.controls.test: ok`
+     - `racing.logic.test: ok`
+     - `storage.score.test: ok`
+
+### Acceptance Mapping (Task 160)
+1. `STATUS.md` reflects latest UI enhancements:
+   - PASS: Added consolidated documentation for dashboard layout restructuring, tile readability upgrades, and interaction feedback systems introduced in Tasks `157`-`159`.
+2. `STATUS.md` formatting is correct:
+   - PASS: Section follows existing status-document structure (`Task` heading, implementation summary, file list, verification, acceptance mapping).
