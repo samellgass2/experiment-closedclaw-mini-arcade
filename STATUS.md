@@ -2,7 +2,7 @@
 
 ## Project
 - Name: `experiment-mini-arcade`
-- Workflow: `Implement Clicker Game`
+- Workflow: `Implement Color Matching Game`
 - Snapshot Date (UTC): `2026-03-06`
 
 ## Task 102 Update (RUN_ID 181)
@@ -655,3 +655,41 @@ Implemented full color matching game UI and integrated it with existing color-ma
    - Result: PASS (`clicker.logic.test: ok`)
 4. `node tests/anomaly.logic.test.mjs`
    - Result: PASS (`anomaly.logic.test: ok`)
+
+## Task 117 Update (RUN_ID 196)
+Updated project status documentation to reflect the current state of the Color Matching Game implementation.
+
+### Current Color Matching Game State
+- Gameplay lifecycle is active in `js/color-match/logic.js` and `js/game.js`:
+  - `READY` -> `RUNNING` -> `ROUND_COMPLETE` -> `RUNNING` -> `OVER`
+  - Game completion occurs after configured round count (`roundsPerGame`, default `5`).
+- Round interaction and input tracking are implemented:
+  - RGB controls support slider, numeric input, and +/- step adjustments per channel.
+  - Inputs are clamped to `0..255`.
+  - Per-round and total adjustment counters are tracked, including per-channel counts.
+- Scoring and feedback model is implemented:
+  - Score combines base accuracy with exact/near bonuses and performance modifiers.
+  - Performance modifiers include fast-round bonus, zero-adjustment bonus, and excessive-adjustment penalty.
+  - Round feedback includes headline/detail/tags and score breakdown payload.
+  - Performance summary tracks average accuracy and near-match streak metrics across rounds.
+- UI integration is implemented in `index.html`, `css/styles.css`, and `js/game.js`:
+  - Target/guess swatches and live RGB labels are rendered.
+  - HUD displays score, best score, round progress, adjustments, average accuracy, streak, and status.
+  - Overlay flow covers start, post-round continuation, and game completion.
+  - Event feed and round result cards update after each submission.
+- Persistence:
+  - Best score is loaded/saved via `localStorage` using configured storage key.
+
+### Verification (Task 117)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/color-match.logic.test.mjs`
+   - Result: PASS (`color-match.logic.test: ok`)
+3. `node tests/clicker.logic.test.mjs`
+   - Result: PASS (`clicker.logic.test: ok`)
+4. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS (`anomaly.logic.test: ok`)
+
+### Acceptance Mapping
+- Verify that `STATUS.md` reflects the current state of color matching game development accurately:
+  - PASS: This section documents the active color-match lifecycle, scoring/feedback behavior, UI wiring, persistence, and validation commands/results.
