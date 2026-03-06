@@ -1,5 +1,65 @@
 import { GAME_STATE, STATE_LABELS } from "./constants.js";
 
+function formatRecordValue(value, decimals) {
+  if (!Number.isFinite(value)) {
+    return "--";
+  }
+
+  return value.toFixed(decimals);
+}
+
+function resetSelectionPanel(ui) {
+  ui.selectedCellLabel.textContent = "No tile selected yet.";
+  ui.selectedTemperatureValue.textContent = "--";
+  ui.selectedLatencyValue.textContent = "--";
+  ui.selectedErrorRateValue.textContent = "--";
+  ui.deviationTemperatureValue.textContent = "--";
+  ui.deviationLatencyValue.textContent = "--";
+  ui.deviationErrorRateValue.textContent = "--";
+  ui.selectionVerdictValue.textContent = "Awaiting selection";
+  ui.selectionVerdictValue.classList.remove("is-correct", "is-wrong");
+  ui.selectionVerdictValue.classList.add("is-pending");
+}
+
+function updateBaselinePanel(ui, state) {
+  const baseline = state.activeGrid ? state.activeGrid.baseline : null;
+  ui.baselineTemperatureValue.textContent = baseline
+    ? `${formatRecordValue(baseline.temperature, 2)} C`
+    : "--";
+  ui.baselineLatencyValue.textContent = baseline
+    ? `${formatRecordValue(baseline.latency, 1)} ms`
+    : "--";
+  ui.baselineErrorRateValue.textContent = baseline
+    ? `${formatRecordValue(baseline.errorRate, 3)} %`
+    : "--";
+}
+
+function updateSelectionPanel(ui, state) {
+  if (!state.lastSelection) {
+    resetSelectionPanel(ui);
+    return;
+  }
+
+  const { row, col, record, profile, isAnomaly } = state.lastSelection;
+  ui.selectedCellLabel.textContent = `Cell r${row + 1}:c${col + 1} selected`;
+  ui.selectedTemperatureValue.textContent = `${formatRecordValue(record.temperature, 2)} C`;
+  ui.selectedLatencyValue.textContent = `${formatRecordValue(record.latency, 1)} ms`;
+  ui.selectedErrorRateValue.textContent = `${formatRecordValue(record.errorRate, 3)} %`;
+
+  ui.deviationTemperatureValue.textContent = `${formatRecordValue(profile.temperature, 2)}x`;
+  ui.deviationLatencyValue.textContent = `${formatRecordValue(profile.latency, 2)}x`;
+  ui.deviationErrorRateValue.textContent = `${formatRecordValue(profile.errorRate, 2)}x`;
+
+  ui.selectionVerdictValue.classList.remove("is-pending", "is-correct", "is-wrong");
+  if (isAnomaly) {
+    ui.selectionVerdictValue.textContent = "Anomaly Confirmed";
+    ui.selectionVerdictValue.classList.add("is-correct");
+  } else {
+    ui.selectionVerdictValue.textContent = "Normal Record";
+    ui.selectionVerdictValue.classList.add("is-wrong");
+  }
+}
+
 export function createUIBindings() {
   const canvas = document.getElementById("gameCanvas");
   const scoreValue = document.getElementById("scoreValue");
@@ -12,8 +72,44 @@ export function createUIBindings() {
   const overlayTitle = document.getElementById("overlayTitle");
   const overlayMessage = document.getElementById("overlayMessage");
   const startButton = document.getElementById("startButton");
+  const baselineTemperatureValue = document.getElementById("baselineTemperatureValue");
+  const baselineLatencyValue = document.getElementById("baselineLatencyValue");
+  const baselineErrorRateValue = document.getElementById("baselineErrorRateValue");
+  const selectedCellLabel = document.getElementById("selectedCellLabel");
+  const selectedTemperatureValue = document.getElementById("selectedTemperatureValue");
+  const selectedLatencyValue = document.getElementById("selectedLatencyValue");
+  const selectedErrorRateValue = document.getElementById("selectedErrorRateValue");
+  const deviationTemperatureValue = document.getElementById("deviationTemperatureValue");
+  const deviationLatencyValue = document.getElementById("deviationLatencyValue");
+  const deviationErrorRateValue = document.getElementById("deviationErrorRateValue");
+  const selectionVerdictValue = document.getElementById("selectionVerdictValue");
+  const eventFeedValue = document.getElementById("eventFeedValue");
 
-  if (!canvas || !scoreValue || !bestScoreValue || !livesValue || !levelValue || !timeValue || !statusValue || !overlay || !overlayTitle || !overlayMessage || !startButton) {
+  if (
+    !canvas ||
+    !scoreValue ||
+    !bestScoreValue ||
+    !livesValue ||
+    !levelValue ||
+    !timeValue ||
+    !statusValue ||
+    !overlay ||
+    !overlayTitle ||
+    !overlayMessage ||
+    !startButton ||
+    !baselineTemperatureValue ||
+    !baselineLatencyValue ||
+    !baselineErrorRateValue ||
+    !selectedCellLabel ||
+    !selectedTemperatureValue ||
+    !selectedLatencyValue ||
+    !selectedErrorRateValue ||
+    !deviationTemperatureValue ||
+    !deviationLatencyValue ||
+    !deviationErrorRateValue ||
+    !selectionVerdictValue ||
+    !eventFeedValue
+  ) {
     throw new Error("Missing required DOM nodes for anomaly detector startup.");
   }
 
@@ -34,7 +130,19 @@ export function createUIBindings() {
     overlay,
     overlayTitle,
     overlayMessage,
-    startButton
+    startButton,
+    baselineTemperatureValue,
+    baselineLatencyValue,
+    baselineErrorRateValue,
+    selectedCellLabel,
+    selectedTemperatureValue,
+    selectedLatencyValue,
+    selectedErrorRateValue,
+    deviationTemperatureValue,
+    deviationLatencyValue,
+    deviationErrorRateValue,
+    selectionVerdictValue,
+    eventFeedValue
   };
 }
 
@@ -54,6 +162,10 @@ export function updateHUD(ui, state) {
   } else {
     ui.timeValue.style.color = "";
   }
+
+  updateBaselinePanel(ui, state);
+  updateSelectionPanel(ui, state);
+  ui.eventFeedValue.textContent = state.roundEvent;
 }
 
 export function showOverlay(ui, title, message, actionLabel) {

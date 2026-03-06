@@ -33,6 +33,8 @@ export function createGameState() {
     currentRound: createRoundSeed(1, 0),
     activeGrid: null,
     selectedCellId: null,
+    lastSelection: null,
+    roundEvent: "Start the run to begin anomaly checks.",
     debug: {
       roundsPlayed: 0,
       correctSelections: 0,
@@ -58,6 +60,8 @@ export function resetRunState(state) {
   state.remainingSeconds = BASE_CONFIG.roundDurationSeconds;
   state.currentRound = createRoundSeed(1, 0);
   state.selectedCellId = null;
+  state.lastSelection = null;
+  state.roundEvent = "Run started. Find the tile with the anomalous dataset record.";
   state.activeGrid = null;
   state.debug.roundsPlayed = 0;
   state.debug.correctSelections = 0;
@@ -85,6 +89,7 @@ export function applyCorrectSelection(state) {
   state.remainingSeconds = Math.max(BASE_CONFIG.minRoundDuration, nextDuration);
 
   state.currentRound = createRoundSeed(state.level, state.score);
+  state.roundEvent = "Correct selection. Round advanced and score awarded.";
   updateBestScore(state);
 }
 
@@ -94,6 +99,7 @@ export function applyWrongSelection(state) {
   state.debug.lastResult = "wrong";
   state.debug.wrongSelections += 1;
   state.debug.currentStreak = 0;
+  state.roundEvent = "Wrong tile selected. Life and time penalty applied.";
 }
 
 export function applyRoundTimeout(state) {
@@ -102,4 +108,5 @@ export function applyRoundTimeout(state) {
   state.debug.timeoutCount += 1;
   state.debug.currentStreak = 0;
   state.remainingSeconds = BASE_CONFIG.roundDurationSeconds;
+  state.roundEvent = "Round timed out. Life lost and timer reset.";
 }

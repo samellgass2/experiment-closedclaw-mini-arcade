@@ -31,6 +31,7 @@ const layout = createGridLayout(
 function createRound() {
   state.selectedCellId = null;
   state.activeGrid = generateRoundGrid(state.currentRound, layout, BASE_CONFIG);
+  state.roundEvent = `Round ${state.debug.roundsPlayed + 1}: find the record that deviates from baseline.`;
   updateHUD(ui, state);
 }
 
@@ -50,13 +51,17 @@ function startNewRun() {
 function pauseToggle() {
   if (state.status === GAME_STATE.RUNNING) {
     setStatus(GAME_STATE.PAUSED);
+    state.roundEvent = "Run paused. Resume to continue searching for the anomaly.";
     pauseTimer(timer);
+    updateHUD(ui, state);
     showOverlay(ui, "Paused", "Press P to resume or R to restart.", "Resume");
     return;
   }
 
   if (state.status === GAME_STATE.PAUSED) {
     setStatus(GAME_STATE.RUNNING);
+    state.roundEvent = "Run resumed. Locate the anomalous dataset record.";
+    updateHUD(ui, state);
     hideOverlay(ui);
     startTimer(timer, performance.now());
   }
@@ -66,6 +71,7 @@ function endRun() {
   pauseTimer(timer);
   setStatus(GAME_STATE.OVER);
   updateBestScore(state);
+  state.roundEvent = `Run complete. Final score ${state.score}, best score ${state.bestScore}.`;
   updateHUD(ui, state);
 
   showOverlay(
@@ -115,6 +121,15 @@ function processSelection(pointerX, pointerY) {
   state.selectedCellId = selectedCell.id;
 
   const evaluation = evaluateSelectedCell(state.activeGrid, selectedCell.id, BASE_CONFIG.dataset);
+  const selectedRecord = state.activeGrid.recordsByCellId[selectedCell.id];
+  state.lastSelection = {
+    cellId: selectedCell.id,
+    row: selectedCell.row,
+    col: selectedCell.col,
+    record: selectedRecord,
+    profile: evaluation.profile,
+    isAnomaly: evaluation.isAnomaly
+  };
 
   if (evaluation.isAnomaly) {
     applyRoundSuccess();
@@ -197,6 +212,8 @@ function initialize() {
     "Click start and find the outlier record each round. Wrong picks cost lives and time.",
     "Start Game"
   );
+  state.roundEvent = "Ready. Press Start Game to begin anomaly detection.";
+  updateHUD(ui, state);
 
   ui.canvas.addEventListener("pointerdown", onCanvasPointerDown);
   ui.startButton.addEventListener("click", onStartButton);

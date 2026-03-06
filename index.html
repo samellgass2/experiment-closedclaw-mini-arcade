@@ -55,6 +55,71 @@
         </div>
       </div>
 
+      <section class="dataset-panel" aria-live="polite" aria-label="Dataset and selection details">
+        <article class="dataset-card">
+          <h2 class="dataset-title">Round Baseline</h2>
+          <p class="dataset-description">Normal tile records should stay close to these values.</p>
+          <dl class="metric-grid">
+            <div class="metric-row">
+              <dt>Temperature</dt>
+              <dd id="baselineTemperatureValue">--</dd>
+            </div>
+            <div class="metric-row">
+              <dt>Latency</dt>
+              <dd id="baselineLatencyValue">--</dd>
+            </div>
+            <div class="metric-row">
+              <dt>Error Rate</dt>
+              <dd id="baselineErrorRateValue">--</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="dataset-card">
+          <h2 class="dataset-title">Last Selection</h2>
+          <p id="selectedCellLabel" class="dataset-description">No tile selected yet.</p>
+          <dl class="metric-grid">
+            <div class="metric-row">
+              <dt>Temperature</dt>
+              <dd id="selectedTemperatureValue">--</dd>
+            </div>
+            <div class="metric-row">
+              <dt>Latency</dt>
+              <dd id="selectedLatencyValue">--</dd>
+            </div>
+            <div class="metric-row">
+              <dt>Error Rate</dt>
+              <dd id="selectedErrorRateValue">--</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="dataset-card">
+          <h2 class="dataset-title">Deviation Check</h2>
+          <p class="dataset-description">Higher values indicate stronger outlier behavior.</p>
+          <dl class="metric-grid">
+            <div class="metric-row">
+              <dt>Temp Delta</dt>
+              <dd id="deviationTemperatureValue">--</dd>
+            </div>
+            <div class="metric-row">
+              <dt>Latency Delta</dt>
+              <dd id="deviationLatencyValue">--</dd>
+            </div>
+            <div class="metric-row">
+              <dt>Error Delta</dt>
+              <dd id="deviationErrorRateValue">--</dd>
+            </div>
+          </dl>
+          <p id="selectionVerdictValue" class="selection-verdict is-pending">Awaiting selection</p>
+        </article>
+      </section>
+
+      <section class="event-feed" aria-live="polite" aria-label="Round event feed">
+        <h2 class="event-feed-title">Round Feed</h2>
+        <p id="eventFeedValue" class="event-feed-message">Start the run to begin anomaly checks.</p>
+      </section>
+
       <footer class="game-footer">
         <ul class="controls-list">
           <li><kbd>Click</kbd> Select tile</li>

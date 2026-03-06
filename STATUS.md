@@ -223,3 +223,42 @@ Implemented core anomaly-detection game logic with dataset-based outlier evaluat
   - Implemented dataset-driven anomaly classification and round generation guarantees one true outlier.
 - Track user scores:
   - Score updates on correct picks, life/time penalties on misses/timeouts, and best-score persistence remain active with enhanced tracking fields.
+
+## Task 104 Update (RUN_ID 183)
+Implemented a user-facing interface upgrade for the anomaly detection game with explicit dataset visibility and clearer scoring context.
+
+### UI Enhancements
+- Expanded page layout with new dataset-oriented panels in `index.html`:
+  - `Round Baseline` metrics (`temperature`, `latency`, `errorRate`)
+  - `Last Selection` details showing selected cell and metric values
+  - `Deviation Check` panel showing normalized metric deltas and anomaly verdict
+  - `Round Feed` message area for run/round status updates
+- Added styling for new components in `css/styles.css`:
+  - Responsive 3-card dataset panel (collapses to 1 column on mobile)
+  - Verdict badge states (`pending`, `correct`, `wrong`)
+  - Event feed container and improved metric grid readability
+
+### Runtime Wiring
+- Updated `js/anomaly/ui.js` to bind and validate new DOM nodes, and to render:
+  - Baseline values for active round data
+  - Last selected record values and deviation multipliers
+  - Selection verdict state and round event feed text
+- Extended `js/anomaly/state.js` with UI-facing fields:
+  - `lastSelection`
+  - `roundEvent`
+- Updated `js/game.js` to populate and maintain UI data flow:
+  - Stores last selected record/profile on each pick
+  - Emits round/run event messages for ready, pause, resume, and game-over states
+  - Keeps baseline/score HUD synchronized through existing update cycle
+
+### Verification (Task 104)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS (`anomaly.logic.test: ok`)
+
+### Acceptance Mapping
+- Ensure that the UI is user-friendly:
+  - Met via structured HUD + dataset cards + responsive layout + event feed messaging.
+- Ensure the UI displays the dataset and score correctly:
+  - Met via always-visible score/best/lives/time HUD and explicit baseline/selection/deviation dataset displays.
