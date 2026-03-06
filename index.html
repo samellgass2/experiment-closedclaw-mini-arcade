@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini Arcade - Flappy Wing</title>
+  <title>Mini Arcade - Anomaly Detector</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <main class="page-shell">
-    <section class="game-card" aria-label="Flappy Wing game area">
+    <section class="game-card" aria-label="Anomaly Detector game area">
       <header class="game-header">
-        <h1 class="game-title">Flappy Wing</h1>
-        <p class="game-subtitle">Tap, fly, and dodge the towers.</p>
+        <h1 class="game-title">Anomaly Detector</h1>
+        <p class="game-subtitle">Find the odd tile before time runs out.</p>
       </header>
 
       <div class="hud" aria-live="polite">
@@ -23,29 +23,42 @@
           <span class="hud-label">Best</span>
           <strong id="bestScoreValue" class="hud-value">0</strong>
         </div>
-        <div class="hud-item hud-status" id="statusValue">Ready</div>
+        <div class="hud-item">
+          <span class="hud-label">Lives</span>
+          <strong id="livesValue" class="hud-value">3</strong>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Level</span>
+          <strong id="levelValue" class="hud-value">1</strong>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Time</span>
+          <strong id="timeValue" class="hud-value">20</strong>
+        </div>
+        <div id="statusValue" class="hud-item hud-status">Ready</div>
       </div>
 
       <div class="game-stage-wrap">
         <canvas
           id="gameCanvas"
           class="game-canvas"
-          width="400"
+          width="640"
           height="640"
           role="img"
-          aria-label="Flappy Wing game canvas"
+          aria-label="Anomaly detector game grid"
         ></canvas>
 
         <div id="overlay" class="overlay visible">
-          <h2 id="overlayTitle" class="overlay-title">Flappy Wing</h2>
-          <p id="overlayMessage" class="overlay-message">Press Space, click, or tap to start.</p>
+          <h2 id="overlayTitle" class="overlay-title">Anomaly Detector</h2>
+          <p id="overlayMessage" class="overlay-message">Click Start to begin. Find the one tile that does not match.</p>
           <button id="startButton" class="action-button" type="button">Start Game</button>
         </div>
       </div>
 
       <footer class="game-footer">
         <ul class="controls-list">
-          <li><kbd>Space</kbd> Flap</li>
+          <li><kbd>Click</kbd> Select tile</li>
+          <li><kbd>Enter</kbd> Start or continue</li>
           <li><kbd>P</kbd> Pause</li>
           <li><kbd>R</kbd> Restart</li>
         </ul>
@@ -53,6 +66,6 @@
     </section>
   </main>
 
-  <script src="js/game.js"></script>
+  <script type="module" src="js/game.js"></script>
 </body>
 </html>
