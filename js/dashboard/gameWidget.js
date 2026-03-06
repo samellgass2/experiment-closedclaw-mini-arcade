@@ -45,6 +45,7 @@ function clicker(root, onScoreChange) {
   start.onclick = () => { startClickerGame(s, performance.now()); ui.refresh(); };
   tap.onclick = () => { tickClickerGame(s, performance.now()); registerClick(s, performance.now()); onScoreChange(s.score); ui.refresh(); };
   ui.controls.append(start, tap); ui.refresh();
+  return { destroy() { root.innerHTML = ""; } };
 }
 
 function racing(root, onScoreChange) {
@@ -59,6 +60,7 @@ function racing(root, onScoreChange) {
   start.onclick = () => { startRace(s, performance.now()); ui.refresh(); };
   step.onclick = () => { setInputState(s, { throttle: true }); tickRace(s, performance.now() + 64); setInputState(s, { throttle: false }); onScoreChange(s.completedLaps); ui.refresh(); };
   ui.controls.append(start, step); ui.refresh();
+  return { destroy() { root.innerHTML = ""; } };
 }
 
 function colorMatch(root, onScoreChange) {
@@ -80,6 +82,7 @@ function colorMatch(root, onScoreChange) {
   next.className = "tile-button tile-button-secondary";
   next.onclick = () => { if (s.status === COLOR_MATCH_STATUS.ROUND_COMPLETE) startNextRound(s, { nowMs: performance.now() }); if (s.status === COLOR_MATCH_STATUS.OVER) startColorMatchGame(s, { nowMs: performance.now() }); ui.refresh(); };
   ui.controls.append(submit, next); ui.refresh();
+  return { destroy() { root.innerHTML = ""; } };
 }
 
 function anomaly(root, onScoreChange) {
@@ -93,16 +96,26 @@ function anomaly(root, onScoreChange) {
   const miss = el("button", "Miss"); miss.className = "tile-button tile-button-danger";
   miss.onclick = () => { applyWrongSelection(s); if (s.lives <= 0) s.status = GAME_STATE.OVER; ui.refresh(); };
   ui.controls.append(mark, miss); ui.refresh();
+  return { destroy() { root.innerHTML = ""; } };
 }
 
 export function createDashboardGameWidget(tileId, options = {}) {
   const root = options.root;
   if (!(root instanceof HTMLElement)) throw new Error("Dashboard game widget root is required.");
   const onScoreChange = typeof options.onScoreChange === "function" ? options.onScoreChange : () => {};
-  if (tileId === "flappy") return createFlappyGameWidget({ root, onScoreChange });
-  if (tileId === "clicker") clicker(root, onScoreChange);
-  if (tileId === "racing") racing(root, onScoreChange);
-  if (tileId === "color-match") colorMatch(root, onScoreChange);
-  if (tileId === "anomaly") anomaly(root, onScoreChange);
+
+  const mountByTileId = {
+    flappy: () => createFlappyGameWidget({ root, onScoreChange }),
+    clicker: () => clicker(root, onScoreChange),
+    racing: () => racing(root, onScoreChange),
+    "color-match": () => colorMatch(root, onScoreChange),
+    anomaly: () => anomaly(root, onScoreChange)
+  };
+
+  const mount = mountByTileId[tileId];
+  if (typeof mount === "function") {
+    return mount();
+  }
+
   return { destroy() { root.innerHTML = ""; } };
 }
