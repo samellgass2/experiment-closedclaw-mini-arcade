@@ -1,25 +1,42 @@
-# Task Report: TASK_ID 117 (RUN_ID 196)
+# Task Report: TASK_ID 126 (RUN_ID 206)
 
 ## Summary
-Updated `STATUS.md` to accurately document the current development state of the Color Matching Game.
+Implemented lap count and lap time tracking improvements for the Top-Down Racing game, including live HUD updates and a lap-by-lap timing panel during gameplay.
 
-## Changes Made
-- Updated project workflow label in `STATUS.md` to `Implement Color Matching Game`.
-- Added `Task 117 Update (RUN_ID 196)` section in `STATUS.md` describing:
-  - Current game lifecycle and round progression states.
-  - RGB input controls, clamping behavior, and adjustment tracking.
-  - Scoring model, feedback payloads, and performance summary metrics.
-  - UI wiring across `index.html`, `css/styles.css`, and `js/game.js`.
-  - Best-score persistence behavior.
-- Added explicit verification command results and acceptance mapping for Task 117.
+## Changes
+- Updated race state in `js/racing/logic.js`:
+  - Added `lastLapMs` to track the most recently completed lap time.
+  - Reset `lastLapMs` on race reset/start.
+  - Refactored lap completion logic to use `finishedLapMs` consistently when recording lap data and best lap.
+  - Exposed `lastLapMs` via `getRacingSnapshot`.
+- Updated HUD rendering in `js/racing/renderer.js`:
+  - Added live `Last Lap` field updates.
+  - Added lap history rendering to show each completed lap time in order.
+- Wired new UI bindings in `js/game.js`:
+  - Bound `lastLapValue` and `lapHistoryValue` DOM nodes.
+- Extended UI structure in `index.html`:
+  - Added `Last Lap` metric card in HUD.
+  - Added `Lap Times` section with an ordered list for completed laps.
+- Styled lap timing display in `css/styles.css`:
+  - Adjusted HUD grid for an additional metric.
+  - Added styles for the lap history card and list.
+- Expanded racing tests in `tests/racing.logic.test.mjs`:
+  - Added assertions for real-time timer progression while running.
+  - Added assertions for completed lap capture into `lapTimesMs` and `lastLapMs`.
+  - Added snapshot assertion for `lastLapMs` default value.
 
 ## Verification
-Executed and passed:
-1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
-2. `node tests/color-match.logic.test.mjs`
-3. `node tests/clicker.logic.test.mjs`
-4. `node tests/anomaly.logic.test.mjs`
+Executed:
+`for test_file in tests/*.mjs; do node "$test_file"; done`
 
-## Acceptance Criteria Mapping
-- Verify that `STATUS.md` reflects the current state of the color matching game development accurately: satisfied.
-  - `STATUS.md` now includes a dedicated Task 117 progress section with implementation and validation details aligned to the current codebase.
+Result:
+- anomaly.logic.test: ok
+- clicker.logic.test: ok
+- color-match.logic.test: ok
+- racing.controls.test: ok
+- racing.logic.test: ok
+
+## Acceptance Coverage
+- Lap count remains visible and updates as laps complete.
+- Lap timing updates in real time during active gameplay (`currentLapMs` + HUD field updates each frame).
+- Time taken for each completed lap is now displayed in the `Lap Times` panel and persisted in race state (`lapTimesMs` / `lastLapMs`).

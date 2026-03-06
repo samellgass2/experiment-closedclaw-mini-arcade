@@ -2,7 +2,7 @@
 
 ## Project
 - Name: `experiment-mini-arcade`
-- Workflow: `Implement Color Matching Game`
+- Workflow: `Implement Top-Down Racing Game`
 - Snapshot Date (UTC): `2026-03-06`
 
 ## Task 102 Update (RUN_ID 181)
@@ -762,3 +762,213 @@ Updated project status documentation to reflect the current state of the Color M
 ### Overall Workflow Verdict
 - PASS
 - Rationale: The branch delivers a functioning color matching game where users adjust RGB values to match target colors, scores are computed from accuracy and interaction performance, and feedback is shown per round and across game summary UI.
+
+## Task 124 Update (RUN_ID 203)
+Implemented a new top-down racing game scaffold as the active arcade experience, centered on a rendered canvas track and a safe initial game setup.
+
+### Structure Added
+- New racing modules:
+  - `js/racing/logic.js`
+  - `js/racing/renderer.js`
+- New tests:
+  - `tests/racing.logic.test.mjs`
+- Updated entrypoint and presentation:
+  - `js/game.js`
+  - `index.html`
+  - `css/styles.css`
+
+### What This Setup Provides
+- Dedicated game state machine for racing: `READY`, `RUNNING`, `PAUSED`, `OVER`.
+- Canvas-first game surface (`#raceCanvas`) with deterministic dimensions and immediate first render on load.
+- Baseline oval track model with:
+  - Outer/inner bounds
+  - Start line marker
+  - Spawn point and heading
+- Core vehicle simulation loop:
+  - Throttle, brake/reverse, steering, drag, off-track penalty
+  - Position/heading integration each frame
+- Lap/session bookkeeping:
+  - Elapsed race timer
+  - Current lap timer
+  - Completed lap count and lap target
+  - Best-lap persistence via `localStorage`
+- HUD and controls wiring:
+  - Buttons: start, pause/resume, reset
+  - Keyboard controls for movement and start/pause (`WASD`/arrows, `Space`)
+  - Event feed and on/off track status indicator
+- Debug-friendly runtime exposure:
+  - `window.__TOP_DOWN_RACING__.getSnapshot()` for quick state inspection
+
+### Verification (Task 124)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs && node tests/racing.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
+     - `racing.logic.test: ok`
+3. Local HTTP smoke check (`python3 -m http.server` + `curl`)
+   - Result: PASS
+   - Output:
+     - `/ 200`
+     - `/index.html 200`
+     - `/css/styles.css 200`
+     - `/js/game.js 200`
+     - `/js/racing/logic.js 200`
+     - `/js/racing/renderer.js 200`
+
+### Acceptance Mapping (Task 124)
+1. Verify game canvas is displayed correctly:
+   - Satisfied by new `index.html` canvas container and `js/game.js` initialization/render path calling renderer on startup.
+2. Verify initial game state is set up without errors:
+   - Satisfied by `createRacingState()` defaults (`READY` state, spawn point, timers, input map) and passing syntax/tests/smoke checks.
+
+## Task 125 Update (RUN_ID 205)
+Implemented core racing mechanics for the top-down racing game so keyboard controls drive deterministic movement around the oval track.
+
+### Implementation Details
+- Refined `js/racing/logic.js` to use track-relative movement:
+  - Car now tracks `progressAngle`, `laneOffset`, and `angularVelocity`.
+  - Position and heading are derived each tick from elliptical lane geometry.
+  - Throttle/brake/drag continue to control speed while steering shifts lane position.
+  - Added lane centering, off-track drag, and stronger clamping for stable handling.
+- Reworked lap progression to detect forward start-line crossing via angle checks and enforce `minLapMs` per lap.
+- Preserved and extended state snapshot data for runtime inspection.
+- Added `js/racing/controls.js`:
+  - `mapKeyboardEventCodeToInputPatch(code, pressed)` for explicit keyboard mapping.
+  - `createReleasedInputPatch()` for resetting controls.
+- Updated `js/game.js` to use shared controls mapping and clear active input on `blur` / hidden tab transitions.
+
+### Tests Added/Updated
+- Added `tests/racing.controls.test.mjs` to validate keyboard mapping and release patch behavior.
+- Expanded `tests/racing.logic.test.mjs` to verify:
+  - Track-relative movement from inputs.
+  - Lap completion with sustained forward motion.
+  - Lane shift behavior under steering.
+  - Snapshot compatibility.
+
+### Verification (Task 125)
+1. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs && node tests/racing.controls.test.mjs && node tests/racing.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
+     - `racing.controls.test: ok`
+     - `racing.logic.test: ok`
+
+### Acceptance Mapping (Task 125)
+1. Player can control the icon using keyboard inputs:
+   - Satisfied by `js/racing/controls.js` keyboard mapping, `js/game.js` keydown/keyup integration, and input reset safeguards.
+2. Icon moves around the circular track correctly:
+   - Satisfied by track-relative movement and lap crossing logic in `js/racing/logic.js`, plus passing movement/lap tests in `tests/racing.logic.test.mjs`.
+
+## Task 127 Update (RUN_ID 207)
+Updated status documentation for the active top-down racing workflow to reflect implemented features and concrete next development steps.
+
+### Current Top-Down Racing Game Progress
+- Core racing gameplay loop is implemented and playable:
+  - State lifecycle: `READY` -> `RUNNING` -> `PAUSED` -> `OVER`
+  - Frame-based simulation with deterministic tick clamping in `tickRace()`
+  - Start, pause/resume, and reset control flow wired through `js/game.js`
+- Vehicle and track simulation are implemented in `js/racing/logic.js`:
+  - Elliptical track model with centerline lane geometry and start-line crossing checks
+  - Keyboard-driven throttle/brake/steer controls mapped from arrows and WASD
+  - Lane offset steering model with lane-centering and off-track drag/grip penalties
+  - Forward lap detection with minimum lap-time guard and lap-target race completion
+- Session timing and progression data are implemented:
+  - Elapsed race timer and current lap timer update every running tick
+  - Per-lap history (`lapTimesMs`), `lastLapMs`, and `bestLapMs` tracking
+  - Best lap persistence through `localStorage`
+- Rendering and HUD integration are implemented in `js/racing/renderer.js`:
+  - Canvas rendering for background, oval track, start line, and player car
+  - Ready-state overlay prompt and event message output
+  - HUD values for status, laps, timers, speed, track state, and lap history
+- Test coverage for racing behavior is implemented:
+  - `tests/racing.logic.test.mjs` verifies state transitions, movement, lap completion, steering/lane behavior, timers, snapshot output, and best-lap persistence path
+  - `tests/racing.controls.test.mjs` verifies keyboard input mapping and full-input release patch behavior
+
+### Next Steps
+1. Add AI opponents and overtake/race-position tracking to move beyond solo time trial gameplay.
+2. Introduce collision handling against track boundaries and opponent vehicles with clearer penalty feedback.
+3. Add richer race UX (countdown lights, finish summary panel, and optional ghost lap replay).
+4. Expand balancing/configuration support (difficulty presets, lap target selector, and speed/handling tuning).
+5. Add mobile/touch control support and accessibility options for non-keyboard play.
+
+### Verification (Task 127)
+1. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs && node tests/racing.controls.test.mjs && node tests/racing.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
+     - `racing.controls.test: ok`
+     - `racing.logic.test: ok`
+
+### Acceptance Mapping (Task 127)
+1. `STATUS.md` is updated with latest top-down racing game progress:
+   - PASS: This section documents implemented racing systems (state loop, controls, simulation, rendering, HUD, and tests).
+2. `STATUS.md` includes next steps:
+   - PASS: A prioritized next-steps list is included for upcoming racing development work.
+
+## Tester Report (Workflow #15)
+- QA Date (UTC): `2026-03-06`
+- Branch: `workflow/15/dev`
+- Scope: Verify Tasks `#124`, `#125`, `#126`, `#127` for "Implement Top-Down Racing Game" with no code changes.
+
+### Tests Run and Results
+1. `cat package.json | grep -A 20 '"scripts"'`
+   - Result: SKIPPED (no `package.json` in repository root)
+   - Output:
+     - `cat: package.json: No such file or directory`
+2. Test harness discovery (`Makefile`/npm/pytest config scan)
+   - Result: SKIPPED (no compatible manifest/config found)
+3. `node --test tests/*.mjs`
+   - Result: PASS
+   - Output summary:
+     - `tests 5`
+     - `pass 5`
+     - `fail 0`
+     - Includes `racing.controls.test: ok` and `racing.logic.test: ok`
+4. Syntax checks:
+   - `node --check js/game.js`
+   - `node --check js/racing/logic.js`
+   - `node --check js/racing/renderer.js`
+   - `node --check js/racing/controls.js`
+   - Result: PASS
+5. Local HTTP smoke checks (`python3 -m http.server` + `curl`)
+   - Result: PASS
+   - Output:
+     - `/ 200`
+     - `/index.html 200`
+     - `/css/styles.css 200`
+     - `/js/game.js 200`
+     - `/js/racing/logic.js 200`
+     - `/js/racing/renderer.js 200`
+     - `/js/racing/controls.js 200`
+
+### Per-Task Acceptance Verdict
+1. Task #124: Create Top-Down Racing Game Structure
+   - Verdict: PASS
+   - Evidence: `index.html` provides `#raceCanvas`; `js/game.js` binds required UI nodes, initializes controller, performs initial render, and starts frame loop without syntax/runtime load errors in smoke checks.
+2. Task #125: Implement Racing Mechanics
+   - Verdict: PASS
+   - Evidence: Keyboard mapping (`js/racing/controls.js`) and game input wiring (`js/game.js`) drive throttle/brake/steering; track-relative movement and steering/lane behavior validated by passing `tests/racing.controls.test.mjs` and `tests/racing.logic.test.mjs`.
+3. Task #126: Track Laps and Time
+   - Verdict: PASS
+   - Evidence: `js/racing/logic.js` updates `elapsedMs`, `currentLapMs`, `completedLaps`, `lapTimesMs`, `lastLapMs`, `bestLapMs` during `tickRace`; `js/racing/renderer.js` displays these values in HUD/lap history each frame; lap timing assertions pass in `tests/racing.logic.test.mjs`.
+4. Task #127: Update STATUS.md with Game Progress
+   - Verdict: PASS
+   - Evidence: Existing Task #127 section documents implemented racing features and clear next steps.
+
+### Bugs Filed
+- None.
+
+### Integration and Regression Assessment
+- Racing feature is cohesive end-to-end: UI, controls, simulation, lap tracking, HUD updates, and persistence paths are integrated.
+- Existing non-racing suites (`anomaly`, `clicker`, `color-match`) continue to pass in the full test run.
+
+### Overall Verdict
+- CLEAN

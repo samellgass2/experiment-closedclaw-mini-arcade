@@ -3,165 +3,86 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini Arcade - Color Match Challenge</title>
+  <title>Mini Arcade - Top-Down Racing</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <main class="page-shell">
-    <section class="game-card" aria-label="Color Match Challenge game area">
-      <header class="game-header">
-        <h1 class="game-title">Color Match Challenge</h1>
-        <p class="game-subtitle">Match the target color by adjusting red, green, and blue channels.</p>
+    <section class="race-card" aria-label="Top-down racing game area">
+      <header class="race-header">
+        <h1 class="race-title">Top-Down Racing</h1>
+        <p class="race-subtitle">Complete 3 laps, stay on track, and beat your best lap time.</p>
       </header>
 
-      <section class="hud" aria-live="polite" aria-label="Game score and round status">
-        <div class="hud-primary">
-          <article class="hud-item hud-item-score">
-            <span class="hud-label">Score</span>
-            <strong id="scoreValue" class="hud-value hud-value-emphasis">0</strong>
-            <span class="hud-meta">Best: <span id="bestScoreValue">0</span></span>
-          </article>
-          <article class="hud-item hud-item-round">
-            <span class="hud-label">Round</span>
-            <strong id="roundValue" class="hud-value hud-value-emphasis">0 / 5</strong>
-            <span id="roundMetaValue" class="hud-meta">Rounds remaining: 5</span>
-          </article>
-        </div>
-        <div class="hud-secondary">
-          <div class="hud-item hud-item-compact">
-            <span class="hud-label">Adjustments</span>
-            <strong id="adjustmentsValue" class="hud-value">0</strong>
-          </div>
-          <div class="hud-item hud-item-compact">
-            <span class="hud-label">Avg Accuracy</span>
-            <strong id="averageAccuracyValue" class="hud-value">0.0%</strong>
-          </div>
-          <div class="hud-item hud-item-compact">
-            <span class="hud-label">Near Streak</span>
-            <strong id="streakValue" class="hud-value">0</strong>
-          </div>
-          <div class="hud-item hud-item-compact">
-            <span class="hud-label">Last Accuracy</span>
-            <strong id="accuracyValue" class="hud-value">--</strong>
-          </div>
-          <div id="statusValue" class="hud-item hud-status">READY</div>
-        </div>
-      </section>
-
-      <section class="swatch-panel" aria-label="Target and guess colors">
-        <article class="swatch-card">
-          <h2 class="dataset-title">Target Color</h2>
-          <p class="dataset-description">Reference color to match this round.</p>
-          <div id="targetSwatch" class="color-swatch" role="img" aria-label="Target color swatch"></div>
-          <p id="targetRgbValue" class="swatch-rgb">RGB(--, --, --)</p>
+      <section class="hud" aria-live="polite" aria-label="Race status and metrics">
+        <article class="hud-item">
+          <span class="hud-label">Status</span>
+          <strong id="statusValue" class="hud-value">READY</strong>
         </article>
-
-        <article class="swatch-card">
-          <h2 class="dataset-title">Your Guess</h2>
-          <p class="dataset-description">Adjust channels to match as closely as possible.</p>
-          <div id="guessSwatch" class="color-swatch" role="img" aria-label="Current guess color swatch"></div>
-          <p id="guessRgbValue" class="swatch-rgb">RGB(128, 128, 128)</p>
+        <article class="hud-item">
+          <span class="hud-label">Laps</span>
+          <strong id="lapValue" class="hud-value">0 / 3</strong>
+        </article>
+        <article class="hud-item">
+          <span class="hud-label">Race Time</span>
+          <strong id="timerValue" class="hud-value">0.00s</strong>
+        </article>
+        <article class="hud-item">
+          <span class="hud-label">Current Lap</span>
+          <strong id="currentLapValue" class="hud-value">0.00s</strong>
+        </article>
+        <article class="hud-item">
+          <span class="hud-label">Last Lap</span>
+          <strong id="lastLapValue" class="hud-value">--</strong>
+        </article>
+        <article class="hud-item">
+          <span class="hud-label">Best Lap</span>
+          <strong id="bestLapValue" class="hud-value">--</strong>
+        </article>
+        <article class="hud-item">
+          <span class="hud-label">Speed</span>
+          <strong id="speedValue" class="hud-value">0 km/h</strong>
+        </article>
+        <article class="hud-item">
+          <span class="hud-label">Track State</span>
+          <strong id="trackStateValue" class="hud-value is-safe">ON TRACK</strong>
         </article>
       </section>
 
-      <section class="controls-panel" aria-label="Color channel controls">
-        <h2 class="controls-title">Color Controls</h2>
-
-        <div class="channel-row" data-channel="red">
-          <label for="redRange" class="channel-label">Red</label>
-          <button id="redDownButton" class="channel-adjust" type="button" aria-label="Decrease red by five">-5</button>
-          <input id="redRange" class="channel-range" type="range" min="0" max="255" step="1" value="128" aria-label="Red channel slider">
-          <button id="redUpButton" class="channel-adjust" type="button" aria-label="Increase red by five">+5</button>
-          <input id="redInput" class="channel-number" type="number" min="0" max="255" step="1" value="128" aria-label="Red channel value">
-        </div>
-
-        <div class="channel-row" data-channel="green">
-          <label for="greenRange" class="channel-label">Green</label>
-          <button id="greenDownButton" class="channel-adjust" type="button" aria-label="Decrease green by five">-5</button>
-          <input id="greenRange" class="channel-range" type="range" min="0" max="255" step="1" value="128" aria-label="Green channel slider">
-          <button id="greenUpButton" class="channel-adjust" type="button" aria-label="Increase green by five">+5</button>
-          <input id="greenInput" class="channel-number" type="number" min="0" max="255" step="1" value="128" aria-label="Green channel value">
-        </div>
-
-        <div class="channel-row" data-channel="blue">
-          <label for="blueRange" class="channel-label">Blue</label>
-          <button id="blueDownButton" class="channel-adjust" type="button" aria-label="Decrease blue by five">-5</button>
-          <input id="blueRange" class="channel-range" type="range" min="0" max="255" step="1" value="128" aria-label="Blue channel slider">
-          <button id="blueUpButton" class="channel-adjust" type="button" aria-label="Increase blue by five">+5</button>
-          <input id="blueInput" class="channel-number" type="number" min="0" max="255" step="1" value="128" aria-label="Blue channel value">
-        </div>
-
-        <div class="action-row">
-          <button id="submitRoundButton" class="action-button" type="button">Submit Guess</button>
-          <button id="nextRoundButton" class="action-button action-button-secondary" type="button">Next Round</button>
-          <button id="restartButton" class="action-button action-button-ghost" type="button">Restart Game</button>
-        </div>
+      <section class="canvas-wrap" aria-label="Racing game canvas">
+        <canvas
+          id="raceCanvas"
+          width="960"
+          height="600"
+          role="img"
+          aria-label="Top-down race track with player car"
+        ></canvas>
       </section>
 
-      <section class="dataset-panel" aria-live="polite" aria-label="Round feedback and input details">
-        <article class="dataset-card">
-          <h2 class="dataset-title">Round Result</h2>
-          <p id="selectedCellLabel" class="dataset-description">Submit a guess to score points.</p>
-          <dl class="metric-grid">
-            <div class="metric-row">
-              <dt>Accuracy</dt>
-              <dd id="selectedTemperatureValue">--</dd>
-            </div>
-            <div class="metric-row">
-              <dt>Points Awarded</dt>
-              <dd id="selectedLatencyValue">--</dd>
-            </div>
-            <div class="metric-row">
-              <dt>Total Score</dt>
-              <dd id="selectedErrorRateValue">0</dd>
-            </div>
-            <div class="metric-row">
-              <dt>Score Breakdown</dt>
-              <dd id="scoreBreakdownValue">--</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article class="dataset-card">
-          <h2 class="dataset-title">Input Summary</h2>
-          <p class="dataset-description">Tracks interactions across the current game.</p>
-          <dl class="metric-grid">
-            <div class="metric-row">
-              <dt>Total Adjustments</dt>
-              <dd id="deviationTemperatureValue">0</dd>
-            </div>
-            <div class="metric-row">
-              <dt>Red / Green / Blue</dt>
-              <dd id="deviationLatencyValue">0 / 0 / 0</dd>
-            </div>
-            <div class="metric-row">
-              <dt>Round Guess</dt>
-              <dd id="deviationErrorRateValue">RGB(128, 128, 128)</dd>
-            </div>
-          </dl>
-          <p id="selectionVerdictValue" class="selection-verdict is-pending">Awaiting input</p>
-          <p id="feedbackDetailValue" class="feedback-detail">Submit a round to view scoring feedback.</p>
-          <p id="feedbackTagsValue" class="feedback-tags">Balanced round</p>
-        </article>
+      <section class="controls" aria-label="Game controls">
+        <button id="startRaceButton" class="action-button" type="button">Start Race</button>
+        <button id="pauseRaceButton" class="action-button action-button-secondary" type="button">Pause / Resume</button>
+        <button id="resetRaceButton" class="action-button action-button-ghost" type="button">Reset</button>
       </section>
 
-      <section class="event-feed" aria-live="polite" aria-label="Game event feed">
-        <h2 class="event-feed-title">Game Feed</h2>
-        <p id="eventFeedValue" class="event-feed-message">Press Start Game to begin the first round.</p>
+      <section class="event-feed" aria-live="polite" aria-label="Race event updates">
+        <h2 class="event-title">Race Feed</h2>
+        <p id="eventValue" class="event-message">Press Start Race to begin.</p>
       </section>
 
-      <div id="overlay" class="overlay visible">
-        <h2 id="overlayTitle" class="overlay-title">Color Match Challenge</h2>
-        <p id="overlayMessage" class="overlay-message">Start the game, adjust RGB channels, and submit your guess each round.</p>
-        <button id="startButton" class="action-button" type="button">Start Game</button>
-      </div>
+      <section class="lap-history" aria-live="polite" aria-label="Completed lap times">
+        <h2 class="event-title">Lap Times</h2>
+        <ol id="lapHistoryValue" class="lap-history-list">
+          <li class="lap-history-empty">No completed laps yet.</li>
+        </ol>
+      </section>
 
-      <footer class="game-footer">
+      <footer class="race-footer">
         <ul class="controls-list">
-          <li><kbd>Enter</kbd> Submit guess / start next round</li>
-          <li><kbd>R/F</kbd> Red +5 / -5</li>
-          <li><kbd>G/H</kbd> Green +5 / -5</li>
-          <li><kbd>B/N</kbd> Blue +5 / -5</li>
+          <li><kbd>Space</kbd> Start race / pause / resume</li>
+          <li><kbd>W</kbd> or <kbd>↑</kbd> Throttle</li>
+          <li><kbd>S</kbd> or <kbd>↓</kbd> Brake / reverse</li>
+          <li><kbd>A</kbd> / <kbd>D</kbd> or <kbd>←</kbd> / <kbd>→</kbd> Steer</li>
         </ul>
       </footer>
     </section>
