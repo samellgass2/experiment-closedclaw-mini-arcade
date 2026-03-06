@@ -107,6 +107,10 @@ body {
   color: var(--success);
 }
 
+.hud-status.is-loading {
+  color: #1d5f8d;
+}
+
 .hud-status.is-paused,
 .hud-status.is-ready {
   color: var(--muted);
@@ -175,6 +179,12 @@ body {
   filter: brightness(1.03);
   outline: 2px solid rgba(255, 143, 63, 0.5);
   outline-offset: 2px;
+}
+
+.action-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  filter: grayscale(0.12);
 }
 
 .game-footer {

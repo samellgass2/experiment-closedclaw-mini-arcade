@@ -4,10 +4,19 @@
   const STORAGE_KEY = "flappy-wing-best-score";
 
   const GAME_STATE = {
+    LOADING: "loading",
     READY: "ready",
     RUNNING: "running",
     PAUSED: "paused",
     OVER: "over"
+  };
+
+  const ASSET_PATHS = {
+    sky: "assets/images/sky.svg",
+    ground: "assets/images/ground.svg",
+    pipe: "assets/images/pipe.svg",
+    bird: "assets/images/bird.svg",
+    cloud: "assets/images/cloud.svg"
   };
 
   const canvas = document.getElementById("gameCanvas");
@@ -38,10 +47,12 @@
     floorHeight: 90,
     cloudSpeed: 16,
     cloudCount: 4,
-    collisionPadding: 5
+    collisionPadding: 5,
+    groundScrollSpeed: 120
   };
 
   const stateLabels = {
+    [GAME_STATE.LOADING]: "Loading",
     [GAME_STATE.READY]: "Ready",
     [GAME_STATE.RUNNING]: "Running",
     [GAME_STATE.PAUSED]: "Paused",
@@ -49,16 +60,19 @@
   };
 
   const game = {
-    state: GAME_STATE.READY,
+    state: GAME_STATE.LOADING,
     score: 0,
     bestScore: loadBestScore(),
     bird: null,
     pipes: [],
     clouds: [],
+    assets: {},
+    assetsReady: false,
+    assetLoadErrors: [],
+    groundOffset: 0,
     lastTime: 0,
     spawnAccumulator: 0,
     inputQueueMs: [],
-    nextPipeId: 1,
     lastFlapAt: -Infinity,
     animationFrame: 0
   };
@@ -77,8 +91,8 @@
     return {
       x: canvas.width * 0.28,
       y: canvas.height * 0.45,
-      width: 34,
-      height: 24,
+      width: 44,
+      height: 32,
       velocityY: 0,
       rotation: 0,
       wingPhase: 0
@@ -90,9 +104,9 @@
     for (let index = 0; index < config.cloudCount; index += 1) {
       clouds.push({
         x: Math.random() * canvas.width,
-        y: 60 + Math.random() * (canvas.height * 0.35),
-        width: 65 + Math.random() * 45,
-        height: 24 + Math.random() * 18,
+        y: 40 + Math.random() * (canvas.height * 0.35),
+        width: 90 + Math.random() * 45,
+        height: 44 + Math.random() * 16,
         offset: Math.random() * Math.PI * 2
       });
     }
@@ -102,13 +116,41 @@
   function resetRunState() {
     game.score = 0;
     game.spawnAccumulator = 0;
+    game.groundOffset = 0;
     game.pipes = [];
     game.inputQueueMs = [];
-    game.nextPipeId = 1;
     game.lastFlapAt = -Infinity;
     game.bird = createBird();
     game.clouds = initializeClouds();
     updateScoreUI();
+  }
+
+  function createImageAsset(key, src) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve({ key, image });
+      image.onerror = () => reject(new Error(`Failed to load asset: ${src}`));
+      image.src = src;
+    });
+  }
+
+  async function loadAssets() {
+    const entries = Object.entries(ASSET_PATHS);
+    const results = await Promise.allSettled(entries.map(([key, src]) => createImageAsset(key, src)));
+
+    game.assets = {};
+    game.assetLoadErrors = [];
+
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        game.assets[result.value.key] = result.value.image;
+      } else {
+        game.assetLoadErrors.push(result.reason.message);
+      }
+    }
+
+    game.assetsReady = game.assetLoadErrors.length === 0;
+    return game.assetsReady;
   }
 
   function spawnPipePair() {
@@ -122,8 +164,6 @@
       bottomY: topHeight + config.pipeGap,
       scored: false
     });
-
-    game.nextPipeId += 1;
   }
 
   function queueFlapInput(eventTimeMs = performance.now()) {
@@ -159,6 +199,10 @@
   }
 
   function flap(eventTimeMs = performance.now()) {
+    if (game.state === GAME_STATE.LOADING || !game.assetsReady) {
+      return;
+    }
+
     if (game.state === GAME_STATE.READY) {
       startGame();
       applyFlap(eventTimeMs);
@@ -171,6 +215,10 @@
   }
 
   function startGame() {
+    if (!game.assetsReady || game.state === GAME_STATE.LOADING) {
+      return;
+    }
+
     if (game.state === GAME_STATE.RUNNING) {
       return;
     }
@@ -194,6 +242,10 @@
   }
 
   function restartGame() {
+    if (!game.assetsReady) {
+      return;
+    }
+
     resetRunState();
     setState(GAME_STATE.READY);
     showOverlay("Flappy Wing", "Press Space, click, or tap to start.", "Start Game");
@@ -238,7 +290,7 @@
   function setState(nextState) {
     game.state = nextState;
     statusValue.textContent = stateLabels[nextState] || nextState;
-    statusValue.classList.remove("is-ready", "is-running", "is-paused", "is-over");
+    statusValue.classList.remove("is-loading", "is-ready", "is-running", "is-paused", "is-over");
     statusValue.classList.add(`is-${nextState}`);
   }
 
@@ -264,11 +316,13 @@
       spawnPipePair();
     }
 
+    game.groundOffset += config.groundScrollSpeed * deltaSeconds;
+
     for (const cloud of game.clouds) {
       cloud.x -= config.cloudSpeed * deltaSeconds;
       if (cloud.x + cloud.width < 0) {
         cloud.x = canvas.width + Math.random() * 120;
-        cloud.y = 60 + Math.random() * (canvas.height * 0.35);
+        cloud.y = 40 + Math.random() * (canvas.height * 0.35);
       }
       cloud.offset += deltaSeconds;
     }
@@ -327,46 +381,86 @@
   }
 
   function drawBackground() {
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, "#84d9ff");
-    gradient.addColorStop(1, "#d9f3ff");
+    const skyImage = game.assets.sky;
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (skyImage) {
+      ctx.drawImage(skyImage, 0, 0, canvas.width, canvas.height);
+    } else {
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "#84d9ff");
+      gradient.addColorStop(1, "#d9f3ff");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    drawClouds();
+    drawGround();
+  }
+
+  function drawClouds() {
+    const cloudImage = game.assets.cloud;
 
     for (const cloud of game.clouds) {
       const wave = Math.sin(cloud.offset) * 4;
-      ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-      roundRect(cloud.x, cloud.y + wave, cloud.width, cloud.height, 12, true);
-      roundRect(cloud.x + 16, cloud.y - 8 + wave, cloud.width * 0.58, cloud.height, 12, true);
+      const y = cloud.y + wave;
+      if (cloudImage) {
+        ctx.drawImage(cloudImage, cloud.x, y, cloud.width, cloud.height);
+      } else {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+        roundRect(cloud.x, y, cloud.width, cloud.height, 12, true);
+      }
+    }
+  }
+
+  function drawGround() {
+    const floorTop = canvas.height - config.floorHeight;
+    const groundImage = game.assets.ground;
+
+    if (!groundImage) {
+      ctx.fillStyle = "#6ac261";
+      ctx.fillRect(0, floorTop, canvas.width, config.floorHeight);
+      return;
     }
 
-    ctx.fillStyle = "#6ac261";
-    ctx.fillRect(0, canvas.height - config.floorHeight, canvas.width, config.floorHeight);
+    const tileSize = config.floorHeight;
+    const offset = -(game.groundOffset % tileSize);
 
-    ctx.fillStyle = "#499944";
-    for (let x = 0; x < canvas.width + 15; x += 15) {
-      ctx.beginPath();
-      ctx.moveTo(x, canvas.height - config.floorHeight);
-      ctx.lineTo(x + 7.5, canvas.height - config.floorHeight - 10);
-      ctx.lineTo(x + 15, canvas.height - config.floorHeight);
-      ctx.closePath();
-      ctx.fill();
+    for (let x = offset; x < canvas.width + tileSize; x += tileSize) {
+      ctx.drawImage(groundImage, x, floorTop, tileSize, tileSize);
     }
   }
 
   function drawPipes() {
+    const pipeImage = game.assets.pipe;
+
     for (const pipe of game.pipes) {
-      const capHeight = 20;
+      const topHeight = pipe.topHeight;
+      const bottomHeight = canvas.height - pipe.bottomY - config.floorHeight;
 
-      ctx.fillStyle = "#59b74b";
-      ctx.fillRect(pipe.x, 0, pipe.width, pipe.topHeight);
-      ctx.fillRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY - config.floorHeight);
+      if (pipeImage) {
+        ctx.save();
+        ctx.translate(pipe.x + pipe.width / 2, topHeight);
+        ctx.scale(1, -1);
+        ctx.drawImage(pipeImage, -pipe.width / 2, 0, pipe.width, topHeight);
+        ctx.restore();
 
-      ctx.fillStyle = "#4b953f";
-      ctx.fillRect(pipe.x - 4, pipe.topHeight - capHeight, pipe.width + 8, capHeight);
-      ctx.fillRect(pipe.x - 4, pipe.bottomY, pipe.width + 8, capHeight);
+        ctx.drawImage(pipeImage, pipe.x, pipe.bottomY, pipe.width, bottomHeight);
+      } else {
+        drawPipesFallback(pipe, topHeight, bottomHeight);
+      }
     }
+  }
+
+  function drawPipesFallback(pipe, topHeight, bottomHeight) {
+    const capHeight = 20;
+
+    ctx.fillStyle = "#59b74b";
+    ctx.fillRect(pipe.x, 0, pipe.width, topHeight);
+    ctx.fillRect(pipe.x, pipe.bottomY, pipe.width, bottomHeight);
+
+    ctx.fillStyle = "#4b953f";
+    ctx.fillRect(pipe.x - 4, topHeight - capHeight, pipe.width + 8, capHeight);
+    ctx.fillRect(pipe.x - 4, pipe.bottomY, pipe.width + 8, capHeight);
   }
 
   function drawBird() {
@@ -375,16 +469,29 @@
       return;
     }
 
+    const birdImage = game.assets.bird;
+
     ctx.save();
     ctx.translate(bird.x, bird.y);
     ctx.rotate(bird.rotation);
 
+    const wingLift = Math.sin(bird.wingPhase) * 0.08;
+    if (birdImage) {
+      ctx.scale(1, 1 + wingLift);
+      ctx.drawImage(birdImage, -bird.width / 2, -bird.height / 2, bird.width, bird.height);
+    } else {
+      drawBirdFallback(bird, wingLift);
+    }
+
+    ctx.restore();
+  }
+
+  function drawBirdFallback(bird, wingLift) {
     ctx.fillStyle = "#ffd34f";
     roundRect(-bird.width / 2, -bird.height / 2, bird.width, bird.height, 10, true);
 
-    const wingLift = Math.sin(bird.wingPhase) * 5;
     ctx.fillStyle = "#ffb030";
-    roundRect(-7, -4 + wingLift, 16, 10, 6, true);
+    roundRect(-7, -4 + wingLift * 28, 16, 10, 6, true);
 
     ctx.fillStyle = "#ffffff";
     roundRect(4, -8, 10, 10, 5, true);
@@ -398,8 +505,6 @@
     ctx.lineTo(17, 4);
     ctx.closePath();
     ctx.fill();
-
-    ctx.restore();
   }
 
   function drawFrame() {
@@ -409,6 +514,10 @@
 
     if (game.state === GAME_STATE.READY) {
       drawCenterText("Press Space to Flap", "#1f4f70");
+    }
+
+    if (game.state === GAME_STATE.LOADING) {
+      drawCenterText("Loading Assets...", "#1f4f70");
     }
   }
 
@@ -489,10 +598,11 @@
     }
   }
 
-  function initialize() {
+  async function initialize() {
     resetRunState();
-    setState(GAME_STATE.READY);
-    showOverlay("Flappy Wing", "Press Space, click, or tap to start.", "Start Game");
+    setState(GAME_STATE.LOADING);
+    showOverlay("Loading Graphics", "Preparing game assets...", "Loading...");
+    startButton.disabled = true;
     updateScoreUI();
 
     canvas.addEventListener("pointerdown", onPointerAction);
@@ -500,6 +610,25 @@
     window.addEventListener("keydown", onKeyAction);
 
     game.animationFrame = window.requestAnimationFrame(gameLoop);
+
+    const loaded = await loadAssets();
+
+    if (!loaded) {
+      setState(GAME_STATE.OVER);
+      showOverlay(
+        "Asset Load Error",
+        `Unable to load graphics. Missing: ${game.assetLoadErrors.join(", ")}`,
+        "Retry"
+      );
+      statusValue.textContent = "Asset Error";
+      startButton.disabled = false;
+      return;
+    }
+
+    startButton.disabled = false;
+    setState(GAME_STATE.READY);
+    showOverlay("Flappy Wing", "Press Space, click, or tap to start.", "Start Game");
+    updateScoreUI();
   }
 
   window.addEventListener("beforeunload", () => {
