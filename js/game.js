@@ -14,7 +14,8 @@ function initializeDashboard() {
   });
 
   window.__MINI_ARCADE_DASHBOARD__ = {
-    getSnapshot: component.getSnapshot
+    getSnapshot: component.getSnapshot,
+    setGameScore: component.setGameScore
   };
 }
 

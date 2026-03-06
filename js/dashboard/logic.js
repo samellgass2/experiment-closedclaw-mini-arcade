@@ -45,6 +45,15 @@ function cloneCatalogEntry(game) {
   };
 }
 
+function normalizeScore(value, fallback = 0) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return Math.max(0, Math.floor(fallback));
+  }
+
+  return Math.max(0, Math.floor(parsed));
+}
+
 function normalizeCatalog(catalog) {
   if (!Array.isArray(catalog) || catalog.length === 0) {
     return DASHBOARD_DEFAULT_CATALOG.map(cloneCatalogEntry);
@@ -103,6 +112,26 @@ function normalizeInitialTiles(initialTileIds, catalogIds) {
   return normalized;
 }
 
+function normalizeInitialScores(initialScores, catalogById) {
+  const scoreMap = new Map();
+  for (const tileId of catalogById.keys()) {
+    scoreMap.set(tileId, 0);
+  }
+
+  if (!initialScores || typeof initialScores !== "object") {
+    return scoreMap;
+  }
+
+  for (const [tileId, value] of Object.entries(initialScores)) {
+    if (!catalogById.has(tileId)) {
+      continue;
+    }
+    scoreMap.set(tileId, normalizeScore(value, 0));
+  }
+
+  return scoreMap;
+}
+
 function findCatalogGame(state, tileId) {
   return state.catalogById.get(tileId) ?? null;
 }
@@ -120,12 +149,14 @@ export function createDashboardState(options = {}) {
   const catalog = normalizeCatalog(options.catalog);
   const catalogById = new Map(catalog.map((game) => [game.id, cloneCatalogEntry(game)]));
   const initialTileIds = normalizeInitialTiles(options.initialTileIds, new Set(catalogById.keys()));
+  const scoresByTileId = normalizeInitialScores(options.initialScores, catalogById);
 
   return {
     catalog,
     catalogById,
     maxTiles: Number.isFinite(options.maxTiles) ? Math.max(1, Math.floor(options.maxTiles)) : catalog.length,
     tileIds: [...initialTileIds],
+    scoresByTileId,
     lastAction: {
       status: DASHBOARD_STATUS.IDLE,
       message: "Add games to build your dashboard."
@@ -288,16 +319,60 @@ export function moveDashboardTile(state, tileId, direction) {
   return rearrangeDashboardTiles(state, currentIndex, targetIndex);
 }
 
+export function updateDashboardTileScore(state, tileId, score) {
+  if (typeof tileId !== "string" || tileId.length === 0) {
+    state.lastAction = {
+      status: DASHBOARD_STATUS.ERROR,
+      message: "Unable to update score: missing tile identifier."
+    };
+    return createResult(false, state, "invalid-tile-id");
+  }
+
+  if (!findCatalogGame(state, tileId)) {
+    state.lastAction = {
+      status: DASHBOARD_STATUS.ERROR,
+      message: "Unable to update score for a game outside the catalog."
+    };
+    return createResult(false, state, "unknown-game");
+  }
+
+  if (!state.tileIds.includes(tileId)) {
+    state.lastAction = {
+      status: DASHBOARD_STATUS.ERROR,
+      message: "Add this game tile before updating its score."
+    };
+    return createResult(false, state, "tile-not-found");
+  }
+
+  const normalizedScore = normalizeScore(score, 0);
+  const previousScore = state.scoresByTileId.get(tileId) ?? 0;
+  state.scoresByTileId.set(tileId, normalizedScore);
+
+  const game = findCatalogGame(state, tileId);
+  state.lastAction = {
+    status: DASHBOARD_STATUS.SUCCESS,
+    message: `${game ? game.name : "Game"} score updated to ${normalizedScore}.`
+  };
+
+  return createResult(true, state, "score-updated", {
+    tileId,
+    previousScore,
+    score: normalizedScore
+  });
+}
+
 export function getDashboardSnapshot(state) {
   const tiles = state.tileIds.map((tileId, index) => {
     const game = findCatalogGame(state, tileId);
+    const score = state.scoresByTileId.get(tileId) ?? 0;
     return {
       id: tileId,
       position: index,
       name: game ? game.name : tileId,
       description: game ? game.description : "",
       difficulty: game ? game.difficulty : "",
-      mode: game ? game.mode : ""
+      mode: game ? game.mode : "",
+      score
     };
   });
 

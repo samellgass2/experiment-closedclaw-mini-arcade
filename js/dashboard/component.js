@@ -5,8 +5,10 @@ import {
   getDashboardSnapshot,
   moveDashboardTile,
   rearrangeDashboardTiles,
-  removeDashboardTile
+  removeDashboardTile,
+  updateDashboardTileScore
 } from "./logic.js";
+import { createGameTileElement, updateGameTileElementScore } from "./gameTile.js";
 
 function createNode(tagName, className, textContent = "") {
   const node = document.createElement(tagName);
@@ -30,40 +32,6 @@ function renderEmptyState(tileList) {
   const empty = createNode("li", "dashboard-empty");
   empty.textContent = "No game tiles yet. Add one from the catalog to get started.";
   tileList.append(empty);
-}
-
-function createTile(game, index, tileCount) {
-  const item = createNode("li", "dashboard-tile");
-  item.dataset.tileId = game.id;
-  item.dataset.position = String(index);
-  item.draggable = true;
-
-  const heading = createNode("h3", "tile-title", game.name);
-  const summary = createNode("p", "tile-summary", game.description);
-  const meta = createNode("p", "tile-meta", `${game.mode} | ${game.difficulty}`);
-
-  const controls = createNode("div", "tile-controls");
-
-  const moveLeftButton = createNode("button", "tile-button tile-button-secondary", "Move Left");
-  moveLeftButton.type = "button";
-  moveLeftButton.dataset.action = "move-left";
-  moveLeftButton.disabled = index === 0;
-  moveLeftButton.setAttribute("aria-label", `Move ${game.name} tile left`);
-
-  const moveRightButton = createNode("button", "tile-button tile-button-secondary", "Move Right");
-  moveRightButton.type = "button";
-  moveRightButton.dataset.action = "move-right";
-  moveRightButton.disabled = index === tileCount - 1;
-  moveRightButton.setAttribute("aria-label", `Move ${game.name} tile right`);
-
-  const removeButton = createNode("button", "tile-button tile-button-danger", "Remove");
-  removeButton.type = "button";
-  removeButton.dataset.action = "remove";
-  removeButton.setAttribute("aria-label", `Remove ${game.name} tile from dashboard`);
-
-  controls.append(moveLeftButton, moveRightButton, removeButton);
-  item.append(heading, summary, meta, controls);
-  return item;
 }
 
 function updateStatusBanner(statusNode, snapshot) {
@@ -177,7 +145,7 @@ export function createDashboardComponent(options = {}) {
     }
 
     for (const tile of snapshot.tiles) {
-      ui.tileList.append(createTile(tile, tile.position, snapshot.tileCount));
+      ui.tileList.append(createGameTileElement(tile, tile.position, snapshot.tileCount));
     }
 
     notifyChange();
@@ -318,6 +286,26 @@ export function createDashboardComponent(options = {}) {
     clearDragStyles();
   }
 
+  function setGameScore(tileId, score) {
+    const result = updateDashboardTileScore(state, tileId, score);
+    const snapshot = getDashboardSnapshot(state);
+    updateStatusBanner(ui.status, snapshot);
+
+    if (!result.accepted) {
+      notifyChange();
+      return result;
+    }
+
+    const tile = ui.tileList.querySelector(`.dashboard-tile[data-tile-id="${tileId}"]`);
+    if (!(tile instanceof HTMLElement) || !updateGameTileElementScore(tile, result.score)) {
+      render();
+      return result;
+    }
+
+    notifyChange();
+    return result;
+  }
+
   function bindEvents() {
     ui.addButton.addEventListener("click", handleAdd);
     ui.tileList.addEventListener("click", handleTileAction);
@@ -335,6 +323,7 @@ export function createDashboardComponent(options = {}) {
   return {
     state,
     render,
-    getSnapshot: () => getDashboardSnapshot(state)
+    getSnapshot: () => getDashboardSnapshot(state),
+    setGameScore
   };
 }

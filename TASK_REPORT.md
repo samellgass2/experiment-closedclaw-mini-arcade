@@ -1,33 +1,45 @@
-# Task Report: TASK_ID 141 (RUN_ID 226)
+# Task Report: TASK_ID 142 (RUN_ID 228)
 
 ## Summary
-Implemented a new dashboard component as the primary interface, enabling users to add, remove, and rearrange game tiles.
+Developed a dedicated game tile component for the dashboard that displays each game name and current score, and added score update plumbing so tile scores can be updated live.
 
 ## Changes
-- Added dashboard logic module: `js/dashboard/logic.js`
-  - state creation and catalog normalization
-  - tile add/remove/rearrange operations
-  - dashboard snapshot and availability helpers
-- Added dashboard UI module: `js/dashboard/component.js`
-  - rendered dashboard shell and controls
-  - implemented add/remove/move interactions
-  - implemented drag-and-drop tile reordering
-- Added re-export module: `js/dashboard/index.js`
-- Updated app bootstrap in `js/game.js` to initialize dashboard
-- Replaced `index.html` structure with dashboard root container
-- Replaced `css/styles.css` with dashboard styling
-- Added tests: `tests/dashboard.logic.test.mjs`
+- Added new tile component module: `js/dashboard/gameTile.js`
+  - `createGameTileElement(game, index, tileCount)` renders a full game tile with:
+    - game name
+    - game description and metadata
+    - `Current Score` display
+    - tile controls (move left/right, remove)
+  - `updateGameTileElementScore(tileElement, score)` updates the score view in-place.
+- Extended dashboard state logic: `js/dashboard/logic.js`
+  - added per-game score map (`scoresByTileId`)
+  - added `initialScores` support in `createDashboardState`
+  - added `updateDashboardTileScore(state, tileId, score)`
+  - updated `getDashboardSnapshot` tiles to include `score`
+- Refactored dashboard UI: `js/dashboard/component.js`
+  - switched tile rendering to use `createGameTileElement`
+  - added `setGameScore(tileId, score)` API to update score and status
+  - returns `setGameScore` from `createDashboardComponent`
+- Updated exports: `js/dashboard/index.js`
+  - now exports the new game tile module
+- Updated app bootstrap: `js/game.js`
+  - `window.__MINI_ARCADE_DASHBOARD__` now exposes `setGameScore`
+- Updated dashboard styles: `css/styles.css`
+  - added `.tile-score` and `.tile-score-value` styling
+- Expanded tests: `tests/dashboard.logic.test.mjs`
+  - validates score defaults in snapshots
+  - validates successful score updates and error behavior for missing tiles
 
 ## Verification
 Executed:
 - `node --test tests/*.mjs`
-- `node --check js/game.js && node --check js/dashboard/logic.js && node --check js/dashboard/component.js`
+- `node --check js/dashboard/logic.js && node --check js/dashboard/component.js && node --check js/dashboard/gameTile.js && node --check js/game.js`
 
 Results:
-- PASS: all test files passed, including `dashboard.logic.test: ok`
-- PASS: syntax checks passed for updated/new dashboard modules
+- PASS: all tests passed
+- PASS: syntax checks passed
 
 ## Acceptance Coverage
-- Add tiles: PASS (`addDashboardTile` + UI add control)
-- Remove tiles: PASS (`removeDashboardTile` + per-tile remove control)
-- Rearrange tiles: PASS (`rearrangeDashboardTiles`, directional move controls, drag-drop reorder)
+- Each game tile displays game name: PASS (rendered via `createGameTileElement`, title in `.tile-title`)
+- Each game tile displays current score: PASS (rendered in `.tile-score-value` from snapshot score)
+- Score updates are reflected: PASS (`setGameScore` -> `updateDashboardTileScore` -> tile DOM update/snapshot update)
