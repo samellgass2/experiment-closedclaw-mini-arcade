@@ -69,21 +69,46 @@ body {
 
 .hud {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 14px;
+}
+
+.hud-primary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hud-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .hud-item {
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-height: 56px;
+  min-height: 72px;
   justify-content: center;
   background: #f7faf6;
+}
+
+.hud-item-score {
+  background: linear-gradient(180deg, #fef8ee, #fff3df);
+  border-color: #e2c49f;
+}
+
+.hud-item-time {
+  background: linear-gradient(180deg, #edf7f2, #e3f2eb);
+  border-color: #aac8b8;
+}
+
+.hud-item-compact {
+  min-height: 58px;
 }
 
 .hud-label {
@@ -97,12 +122,45 @@ body {
   font-size: 1.22rem;
 }
 
+.hud-value-emphasis {
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  letter-spacing: 0.6px;
+  line-height: 1.05;
+}
+
+.hud-meta {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.timer-track {
+  width: 100%;
+  margin-top: 8px;
+  background: #d4e4dc;
+  border-radius: 999px;
+  height: 7px;
+  overflow: hidden;
+}
+
+.timer-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #31a56f, #8acb4c, #efad35, #dc5a2d);
+  transition: width 140ms linear;
+}
+
 .hud-status {
   align-items: center;
+  justify-content: center;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   font-size: 0.85rem;
   font-weight: 700;
+  min-height: 58px;
 }
 
 .hud-status.is-loading,
@@ -332,12 +390,17 @@ kbd {
     padding: 16px;
   }
 
-  .hud {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .hud-primary,
+  .hud-secondary {
+    grid-template-columns: 1fr;
   }
 
   .hud-item {
     min-height: 52px;
+  }
+
+  .hud-value-emphasis {
+    font-size: 1.75rem;
   }
 
   .dataset-panel {

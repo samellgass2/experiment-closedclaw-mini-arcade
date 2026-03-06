@@ -2,7 +2,7 @@
 
 ## Project
 - Name: `experiment-mini-arcade`
-- Workflow: `Implement Anomaly Detection Game`
+- Workflow: `Implement Clicker Game`
 - Snapshot Date (UTC): `2026-03-06`
 
 ## Task 102 Update (RUN_ID 181)
@@ -371,3 +371,228 @@ Documented the latest anomaly detection game progress snapshot in this status fi
 ### Overall Workflow Verdict
 - PASS
 - Rationale: The branch contains a browser-based anomaly detection game with dataset-driven outlier detection, interactive UI, and persistent score tracking; implementation is supported by code inspection and passing logic tests.
+
+## Task 108 Update (RUN_ID 187)
+Implemented clicker game core logic and wired runtime click input to score tracking.
+
+### Logic Added
+- Added clicker state machine module:
+  - `js/clicker/logic.js`
+  - Handles statuses (`READY`, `RUNNING`, `PAUSED`, `OVER`), click registration, score updates, combo streaks, timers, and best-score persistence.
+- Added clicker exports for easier imports:
+  - `js/clicker/index.js`
+  - `js/clicker.js`
+
+### Runtime Integration
+- Replaced main entrypoint behavior in `js/game.js` to run a clicker loop:
+  - Pointer input on game canvas calls click registration.
+  - Score, clicks, combo, best score, and timer are reflected in HUD.
+  - Supports start, pause/resume, restart controls (`Enter`, `P`, `R`).
+  - Round auto-ends on timer expiry and reports final score.
+- Updated copy in `index.html` from anomaly wording to clicker wording while reusing existing HUD/layout shell.
+
+### Tests Added
+- `tests/clicker.logic.test.mjs`
+  - Validates click-driven scoring.
+  - Validates combo scoring behavior.
+  - Validates pause/resume and rejected click scenarios.
+  - Validates timeout/end-state and reset behavior.
+
+### Verification (Task 108)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+
+## Task 109 Update (RUN_ID 188)
+Implemented countdown timer hardening for the clicker game, including explicit timer-focused test coverage and stable game-over behavior when time reaches zero.
+
+### Timer Enhancements
+- Updated clicker runtime timer display in `js/game.js`:
+  - Introduced `formatCountdown` for a more explicit countdown readout (mm:ss for longer rounds, tenths display under a minute).
+  - Ensured HUD time readout is refreshed from `remainingMs` each frame while running.
+- Stabilized timeout completion flow in `js/game.js`:
+  - Added a one-shot completion guard so timer-expiry end-of-round overlay/message rendering happens once per round.
+  - Preserved pause/resume/start behavior while preventing repeated "Round Complete" overlay work across animation frames.
+
+### Tests Added
+- Extended `tests/clicker.logic.test.mjs` with countdown-specific coverage:
+  - `testCountdownTicksToZeroAndStopsGame`: verifies remaining time decreases across ticks, floors at zero, and transitions to `OVER` with `time-expired`.
+  - `testPausePreservesCountdownUntilResume`: verifies timer does not tick while paused and resumes countdown correctly after resume.
+
+### Verification (Task 109)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+
+### Acceptance Mapping
+- Verify that the timer counts down correctly and ends the game when it reaches zero:
+  - PASS: Countdown decrement and timeout transition are directly validated in `tests/clicker.logic.test.mjs` (`testCountdownTicksToZeroAndStopsGame`).
+  - PASS: Runtime loop now performs one-shot round completion handling when timer expiry sets game state to `OVER`.
+
+## Task 110 Update (RUN_ID 189)
+Designed and implemented a clearer clicker game UI with emphasis on score and timer readability.
+
+### UI Changes
+- Reworked the HUD in `index.html` into two rows:
+  - Primary row: prominent `Score` and `Timer` cards.
+  - Secondary row: `Clicks`, `Top Combo`, and status.
+- Added timer progress indicator markup:
+  - `timerProgressValue` fill element inside a dedicated timer track.
+- Updated labels and defaults so the interface reads as clicker-specific and easier to scan.
+
+### Styling Changes
+- Updated `css/styles.css` to support the new HUD composition:
+  - Added `hud-primary`/`hud-secondary` grid layouts.
+  - Added emphasis typography for score/timer values.
+  - Added timer bar styling with smooth fill-width transitions.
+  - Added mobile behavior that stacks primary and secondary HUD cards cleanly.
+
+### Runtime Wiring
+- Updated `js/game.js` UI bindings to new IDs:
+  - `clicksValue`, `comboValue`, `timerProgressValue`.
+- Extended HUD rendering to compute and paint timer progress from:
+  - `remainingMs / roundDurationMs`.
+- Preserved existing score/timer/status updates and game-loop behavior.
+
+### Verification (Task 110)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+
+### Acceptance Mapping
+- Verify that the UI displays the score and timer correctly and is user-friendly:
+  - PASS: Score and timer now occupy primary high-contrast HUD cards with larger typography.
+  - PASS: Timer remains text-based and is reinforced by a live visual progress bar.
+  - PASS: Secondary gameplay stats remain visible without competing with core score/timer focus.
+
+## Task 111 Update (RUN_ID 190)
+Updated project status documentation to reflect the current clicker game implementation and validation state.
+
+### Current Clicker Game State
+- Gameplay loop and status transitions are active and verified:
+  - `READY` -> `RUNNING` -> `PAUSED` -> `RUNNING` -> `OVER`
+- Score system is implemented in `js/clicker/logic.js`:
+  - Per-click points
+  - Combo streak tracking with configurable bonus cap
+  - Best-score persistence via `localStorage`
+- Countdown timer behavior is implemented and stable:
+  - Remaining time decreases during `RUNNING`
+  - Timer does not decrease during `PAUSED`
+  - Round ends automatically at zero with `finalReason: time-expired`
+- Runtime/UI wiring is implemented in `js/game.js` and `index.html`:
+  - Canvas click input registers scoring events
+  - HUD displays score, best score, clicks, top combo, and countdown timer
+  - Timer progress bar updates from `remainingMs / roundDurationMs`
+  - Overlay flow supports start, pause/resume, and round-complete restart path
+- Automated test coverage for clicker logic exists in `tests/clicker.logic.test.mjs`:
+  - Auto-start + scoring
+  - Combo bonus progression
+  - Pause/resume behavior
+  - Rejected clicks outside running state
+  - Timeout-to-game-over behavior
+  - Reset and snapshot state checks
+
+### Verification (Task 111)
+1. `find js tests -type f \\( -name '*.js' -o -name '*.mjs' \\) -print -exec node --check {} \\;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+
+### Acceptance Mapping
+- Check that `STATUS.md` reflects the current state of clicker game development:
+  - PASS: This section documents current clicker logic, runtime/UI wiring, timer/score behavior, and test validation.
+
+## QA Validation Summary (Workflow #12)
+- QA Date (UTC): `2026-03-06`
+- Branch: `workflow/12/dev`
+- Scope: Validate workflow goal "Implement Clicker Game" without adding implementation code changes.
+
+### Commits Reviewed (`main..HEAD`)
+- `0b9ae95` task/111: update clicker implementation status documentation
+- `77b4f29` task/110: redesign clicker hud for score and timer clarity
+- `2ea541f` task/109: implement clicker countdown timer behavior
+- `c61196d` task/108: implement clicker game logic and input scoring
+
+### Commands Run and Results
+1. `git log --oneline main..HEAD`
+   - Result: PASS
+   - Output:
+     - `0b9ae95 task/111: update clicker implementation status documentation`
+     - `77b4f29 task/110: redesign clicker hud for score and timer clarity`
+     - `2ea541f task/109: implement clicker countdown timer behavior`
+     - `c61196d task/108: implement clicker game logic and input scoring`
+2. `git diff main...HEAD --stat`
+   - Result: PASS
+   - Output:
+     - `STATUS.md                    | 147 ++++++++++++++++-`
+     - `TASK_REPORT.md               |  35 ++--`
+     - `css/styles.css               |  73 ++++++++-`
+     - `index.html                   | 102 ++++++------`
+     - `js/clicker.js                |   1 +`
+     - `js/clicker/index.js          |   1 +`
+     - `js/clicker/logic.js          | 244 ++++++++++++++++++++++++++++`
+     - `js/game.js                   | 369 ++++++++++++++++++++++++++-----------------`
+     - `tests/clicker.logic.test.mjs | 177 +++++++++++++++++++++`
+     - `9 files changed, 928 insertions(+), 221 deletions(-)`
+3. `cat package.json | grep -A 40 '"scripts"'`
+   - Result: SKIPPED (no npm manifest present in repository root)
+   - Output:
+     - `cat: package.json: No such file or directory`
+4. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+   - Output:
+     - `js/anomaly/constants.js`
+     - `js/anomaly/renderer.js`
+     - `js/anomaly/ui.js`
+     - `js/anomaly/components/timer.js`
+     - `js/anomaly/components/grid.js`
+     - `js/anomaly/components/anomalyGenerator.js`
+     - `js/anomaly/components/anomalyEvaluator.js`
+     - `js/anomaly/state.js`
+     - `js/game.js`
+     - `js/clicker/logic.js`
+     - `js/clicker/index.js`
+     - `js/clicker.js`
+     - `tests/clicker.logic.test.mjs`
+     - `tests/anomaly.logic.test.mjs`
+5. `node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `clicker.logic.test: ok`
+6. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+
+### Per-Task Acceptance Verdict
+1. Create Clicker Game Logic
+   - Verdict: PASS
+   - Evidence: `js/clicker/logic.js` tracks score, total clicks, combo streak/bonus, state transitions, and rejected clicks outside running state; `tests/clicker.logic.test.mjs` verifies click scoring and state behavior.
+2. Implement Countdown Timer
+   - Verdict: PASS
+   - Evidence: `tickClickerGame` decrements `remainingMs`, floors at zero, and transitions to `OVER` with `finalReason: time-expired`; timeout behavior validated in `testCountdownTicksToZeroAndStopsGame` and pause/resume timer behavior validated in `testPausePreservesCountdownUntilResume`.
+3. Design Clicker Game UI
+   - Verdict: PASS
+   - Evidence: `index.html` exposes dedicated score/timer HUD with `scoreValue`, `timeValue`, and `timerProgressValue`; `js/game.js` updates these values every frame; `css/styles.css` includes readable card layout, progress bar styling, and responsive mobile adjustments.
+4. Update STATUS.md
+   - Verdict: PASS
+   - Evidence: Task 111 status section is present and documents clicker logic, timer behavior, UI wiring, and tests; this QA section now records validation results.
+
+### Overall Workflow Verdict
+- PASS
+- Rationale: The branch implements a playable time-limited clicker game where rapid input increases score, a countdown timer governs round duration, and game state cleanly ends at timeout with UI feedback.

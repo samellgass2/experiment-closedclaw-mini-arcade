@@ -3,40 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini Arcade - Anomaly Detector</title>
+  <title>Mini Arcade - Clicker Challenge</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <main class="page-shell">
-    <section class="game-card" aria-label="Anomaly Detector game area">
+    <section class="game-card" aria-label="Clicker Challenge game area">
       <header class="game-header">
-        <h1 class="game-title">Anomaly Detector</h1>
-        <p class="game-subtitle">Find the odd tile before time runs out.</p>
+        <h1 class="game-title">Clicker Challenge</h1>
+        <p class="game-subtitle">Click fast to maximize your score before time expires.</p>
       </header>
 
-      <div class="hud" aria-live="polite">
-        <div class="hud-item">
-          <span class="hud-label">Score</span>
-          <strong id="scoreValue" class="hud-value">0</strong>
+      <section class="hud" aria-live="polite" aria-label="Game score and timer">
+        <div class="hud-primary">
+          <article class="hud-item hud-item-score">
+            <span class="hud-label">Score</span>
+            <strong id="scoreValue" class="hud-value hud-value-emphasis">0</strong>
+            <span class="hud-meta">Best: <span id="bestScoreValue">0</span></span>
+          </article>
+          <article class="hud-item hud-item-time">
+            <span class="hud-label">Timer</span>
+            <strong id="timeValue" class="hud-value hud-value-emphasis">30.0s</strong>
+            <div class="timer-track" role="presentation" aria-hidden="true">
+              <span id="timerProgressValue" class="timer-fill"></span>
+            </div>
+          </article>
         </div>
-        <div class="hud-item">
-          <span class="hud-label">Best</span>
-          <strong id="bestScoreValue" class="hud-value">0</strong>
+        <div class="hud-secondary">
+          <div class="hud-item hud-item-compact">
+            <span class="hud-label">Clicks</span>
+            <strong id="clicksValue" class="hud-value">0</strong>
+          </div>
+          <div class="hud-item hud-item-compact">
+            <span class="hud-label">Top Combo</span>
+            <strong id="comboValue" class="hud-value">0</strong>
+          </div>
+          <div id="statusValue" class="hud-item hud-status">Ready</div>
         </div>
-        <div class="hud-item">
-          <span class="hud-label">Lives</span>
-          <strong id="livesValue" class="hud-value">3</strong>
-        </div>
-        <div class="hud-item">
-          <span class="hud-label">Level</span>
-          <strong id="levelValue" class="hud-value">1</strong>
-        </div>
-        <div class="hud-item">
-          <span class="hud-label">Time</span>
-          <strong id="timeValue" class="hud-value">20</strong>
-        </div>
-        <div id="statusValue" class="hud-item hud-status">Ready</div>
-      </div>
+      </section>
 
       <div class="game-stage-wrap">
         <canvas
@@ -45,84 +49,84 @@
           width="640"
           height="640"
           role="img"
-          aria-label="Anomaly detector game grid"
+          aria-label="Clicker game board"
         ></canvas>
 
         <div id="overlay" class="overlay visible">
-          <h2 id="overlayTitle" class="overlay-title">Anomaly Detector</h2>
-          <p id="overlayMessage" class="overlay-message">Click Start to begin. Find the one tile that does not match.</p>
+          <h2 id="overlayTitle" class="overlay-title">Clicker Challenge</h2>
+          <p id="overlayMessage" class="overlay-message">Click Start to begin. Every click adds to your score.</p>
           <button id="startButton" class="action-button" type="button">Start Game</button>
         </div>
       </div>
 
       <section class="dataset-panel" aria-live="polite" aria-label="Dataset and selection details">
         <article class="dataset-card">
-          <h2 class="dataset-title">Round Baseline</h2>
-          <p class="dataset-description">Normal tile records should stay close to these values.</p>
+          <h2 class="dataset-title">Current Round</h2>
+          <p class="dataset-description">Round settings and key game constants.</p>
           <dl class="metric-grid">
             <div class="metric-row">
-              <dt>Temperature</dt>
-              <dd id="baselineTemperatureValue">--</dd>
+              <dt>Mode</dt>
+              <dd id="baselineTemperatureValue">Clicker</dd>
             </div>
             <div class="metric-row">
-              <dt>Latency</dt>
-              <dd id="baselineLatencyValue">--</dd>
+              <dt>Scoring</dt>
+              <dd id="baselineLatencyValue">Per click + combo</dd>
             </div>
             <div class="metric-row">
-              <dt>Error Rate</dt>
-              <dd id="baselineErrorRateValue">--</dd>
+              <dt>Goal</dt>
+              <dd id="baselineErrorRateValue">Highest score</dd>
             </div>
           </dl>
         </article>
 
         <article class="dataset-card">
-          <h2 class="dataset-title">Last Selection</h2>
-          <p id="selectedCellLabel" class="dataset-description">No tile selected yet.</p>
+          <h2 class="dataset-title">Click Stats</h2>
+          <p id="selectedCellLabel" class="dataset-description">No clicks recorded yet.</p>
           <dl class="metric-grid">
             <div class="metric-row">
-              <dt>Temperature</dt>
+              <dt>Score</dt>
               <dd id="selectedTemperatureValue">--</dd>
             </div>
             <div class="metric-row">
-              <dt>Latency</dt>
+              <dt>Active Combo</dt>
               <dd id="selectedLatencyValue">--</dd>
             </div>
             <div class="metric-row">
-              <dt>Error Rate</dt>
+              <dt>Best Combo</dt>
               <dd id="selectedErrorRateValue">--</dd>
             </div>
           </dl>
         </article>
 
         <article class="dataset-card">
-          <h2 class="dataset-title">Deviation Check</h2>
-          <p class="dataset-description">Higher values indicate stronger outlier behavior.</p>
+          <h2 class="dataset-title">Recent Input</h2>
+          <p class="dataset-description">Tracks points from the most recent click.</p>
           <dl class="metric-grid">
             <div class="metric-row">
-              <dt>Temp Delta</dt>
+              <dt>Last Gain</dt>
               <dd id="deviationTemperatureValue">--</dd>
             </div>
             <div class="metric-row">
-              <dt>Latency Delta</dt>
+              <dt>Total Clicks</dt>
               <dd id="deviationLatencyValue">--</dd>
             </div>
             <div class="metric-row">
-              <dt>Error Delta</dt>
+              <dt>Top Combo</dt>
               <dd id="deviationErrorRateValue">--</dd>
             </div>
           </dl>
-          <p id="selectionVerdictValue" class="selection-verdict is-pending">Awaiting selection</p>
+          <p id="selectionVerdictValue" class="selection-verdict is-pending">Awaiting click</p>
         </article>
       </section>
 
       <section class="event-feed" aria-live="polite" aria-label="Round event feed">
         <h2 class="event-feed-title">Round Feed</h2>
-        <p id="eventFeedValue" class="event-feed-message">Start the run to begin anomaly checks.</p>
+        <p id="eventFeedValue" class="event-feed-message">Start the round and click the board to score points.</p>
       </section>
 
       <footer class="game-footer">
         <ul class="controls-list">
-          <li><kbd>Click</kbd> Select tile</li>
+          <li><kbd>Click</kbd> Score points</li>
           <li><kbd>Enter</kbd> Start or continue</li>
           <li><kbd>P</kbd> Pause</li>
           <li><kbd>R</kbd> Restart</li>
