@@ -28,6 +28,8 @@
   const config = {
     gravity: 1600,
     flapVelocity: -420,
+    flapCooldownMs: 85,
+    flapBufferMs: 140,
     pipeIntervalMs: 1450,
     pipeSpeed: 160,
     pipeWidth: 68,
@@ -39,6 +41,13 @@
     collisionPadding: 5
   };
 
+  const stateLabels = {
+    [GAME_STATE.READY]: "Ready",
+    [GAME_STATE.RUNNING]: "Running",
+    [GAME_STATE.PAUSED]: "Paused",
+    [GAME_STATE.OVER]: "Game Over"
+  };
+
   const game = {
     state: GAME_STATE.READY,
     score: 0,
@@ -48,6 +57,9 @@
     clouds: [],
     lastTime: 0,
     spawnAccumulator: 0,
+    inputQueueMs: [],
+    nextPipeId: 1,
+    lastFlapAt: -Infinity,
     animationFrame: 0
   };
 
@@ -91,6 +103,9 @@
     game.score = 0;
     game.spawnAccumulator = 0;
     game.pipes = [];
+    game.inputQueueMs = [];
+    game.nextPipeId = 1;
+    game.lastFlapAt = -Infinity;
     game.bird = createBird();
     game.clouds = initializeClouds();
     updateScoreUI();
@@ -105,20 +120,54 @@
       width: config.pipeWidth,
       topHeight,
       bottomY: topHeight + config.pipeGap,
-      passed: false
+      scored: false
     });
+
+    game.nextPipeId += 1;
   }
 
-  function flap() {
-    if (game.state === GAME_STATE.READY) {
-      startGame();
+  function queueFlapInput(eventTimeMs = performance.now()) {
+    game.inputQueueMs.push(eventTimeMs);
+
+    const cutoff = eventTimeMs - config.flapBufferMs;
+    while (game.inputQueueMs.length > 0 && game.inputQueueMs[0] < cutoff) {
+      game.inputQueueMs.shift();
+    }
+  }
+
+  function consumeFlapInput(nowMs) {
+    const cutoff = nowMs - config.flapBufferMs;
+    while (game.inputQueueMs.length > 0 && game.inputQueueMs[0] < cutoff) {
+      game.inputQueueMs.shift();
     }
 
-    if (game.state !== GAME_STATE.RUNNING) {
+    if (game.inputQueueMs.length === 0) {
+      return false;
+    }
+
+    if (nowMs - game.lastFlapAt < config.flapCooldownMs) {
+      return false;
+    }
+
+    game.inputQueueMs.shift();
+    return true;
+  }
+
+  function applyFlap(nowMs = performance.now()) {
+    game.bird.velocityY = config.flapVelocity;
+    game.lastFlapAt = nowMs;
+  }
+
+  function flap(eventTimeMs = performance.now()) {
+    if (game.state === GAME_STATE.READY) {
+      startGame();
+      applyFlap(eventTimeMs);
       return;
     }
 
-    game.bird.velocityY = config.flapVelocity;
+    if (game.state === GAME_STATE.RUNNING) {
+      queueFlapInput(eventTimeMs);
+    }
   }
 
   function startGame() {
@@ -164,6 +213,17 @@
     bestScoreValue.textContent = String(game.bestScore);
   }
 
+  function incrementScore(amount) {
+    game.score += amount;
+
+    if (game.score > game.bestScore) {
+      game.bestScore = game.score;
+      saveBestScore(game.bestScore);
+    }
+
+    updateScoreUI();
+  }
+
   function showOverlay(title, message, buttonLabel) {
     overlayTitle.textContent = title;
     overlayMessage.textContent = message;
@@ -177,7 +237,7 @@
 
   function setState(nextState) {
     game.state = nextState;
-    statusValue.textContent = nextState;
+    statusValue.textContent = stateLabels[nextState] || nextState;
     statusValue.classList.remove("is-ready", "is-running", "is-paused", "is-over");
     statusValue.classList.add(`is-${nextState}`);
   }
@@ -187,7 +247,11 @@
     bestScoreValue.textContent = String(game.bestScore);
   }
 
-  function updateRunning(deltaSeconds) {
+  function updateRunning(deltaSeconds, nowMs) {
+    if (consumeFlapInput(nowMs)) {
+      applyFlap(nowMs);
+    }
+
     const bird = game.bird;
     bird.velocityY += config.gravity * deltaSeconds;
     bird.y += bird.velocityY * deltaSeconds;
@@ -213,10 +277,10 @@
       const pipe = game.pipes[index];
       pipe.x -= config.pipeSpeed * deltaSeconds;
 
-      if (!pipe.passed && bird.x > pipe.x + pipe.width) {
-        pipe.passed = true;
-        game.score += 1;
-        updateScoreUI();
+      const pipeCenterX = pipe.x + pipe.width / 2;
+      if (!pipe.scored && bird.x >= pipeCenterX) {
+        pipe.scored = true;
+        incrementScore(1);
       }
 
       if (pipe.x + pipe.width < -4) {
@@ -384,7 +448,7 @@
     game.lastTime = timestamp;
 
     if (game.state === GAME_STATE.RUNNING) {
-      updateRunning(deltaSeconds);
+      updateRunning(deltaSeconds, timestamp);
     }
 
     drawFrame();
@@ -407,7 +471,9 @@
   function onKeyAction(event) {
     if (event.code === "Space") {
       event.preventDefault();
-      flap();
+      if (!event.repeat) {
+        flap();
+      }
       return;
     }
 

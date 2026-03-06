@@ -1,37 +1,36 @@
 # TASK REPORT
 
 ## Task
-- TASK_ID: 96
-- RUN_ID: 175
-- Title: Create Flappy Bird-like Game Structure
+- TASK_ID: 97
+- RUN_ID: 176
+- Title: Implement Game Mechanics
 
 ## Summary
-Implemented a complete Flappy Bird-like project scaffold with static web assets and initial gameplay logic.
+Implemented and hardened core Flappy Wing game mechanics focused on player input handling and score tracking reliability.
 
-## Files Added
-- `index.html`
-- `css/styles.css`
+## Files Changed
 - `js/game.js`
 - `TASK_REPORT.md`
 
 ## Implementation Details
-- Built game page layout with canvas, overlay, HUD score display, and controls help.
-- Added responsive styling for desktop/mobile, game card framing, HUD, overlay states, and control badges.
-- Implemented initial game runtime in JavaScript:
-  - Game state machine (`ready`, `running`, `paused`, `over`)
-  - Bird physics (gravity, flap impulse, rotation)
-  - Pipe spawn/movement/removal and score progression
-  - Collision detection (ceiling, floor, and pipes)
-  - Pause/restart/start controls for keyboard and pointer
-  - Overlay/UI updates and localStorage best score persistence
-  - Continuous animation loop and rendering pipeline
+- Improved input handling:
+  - Added buffered flap input queue (`flapBufferMs`) so quick input is captured reliably between frames.
+  - Added flap cooldown (`flapCooldownMs`) to prevent accidental multi-flaps from rapid repeated events.
+  - Unified keyboard/pointer flap flow through a single `flap()` path tied to game state.
+  - Preserved existing `Space` flap, `P` pause toggle, and `R` restart controls.
+- Improved score tracking:
+  - Added explicit `incrementScore()` helper to centralize score and best-score updates.
+  - Switched pipe scoring to a dedicated `scored` flag with center-crossing detection, ensuring each pipe pair scores once.
+  - Persisted best score immediately when surpassed and kept HUD synchronized.
+- Improved state display consistency:
+  - Added human-readable state labels (`Ready`, `Running`, `Paused`, `Game Over`) for HUD status text.
 
 ## Verification
 - `node --check js/game.js` (pass)
-- Served and loaded `index.html` over local HTTP:
-  - `python3 -m http.server 8123` + `curl -I http://127.0.0.1:8123/index.html` returned `HTTP/1.0 200 OK`
-- No project test runner was present (`package.json` and `Makefile` not found).
+- No project test runner detected (no `package.json`, `Makefile`, or Python test config files found).
 
 ## Acceptance Test Mapping
-- Game structure files created: **met**
-- Files load in browser without setup errors: **met** (HTML served successfully and JS syntax validated)
+- Game responds to user input: **met**
+  - Pointer and keyboard input paths drive flap/start/pause/restart behavior through state-aware handlers.
+- Game correctly tracks player score during gameplay: **met**
+  - Score increments once per successfully passed pipe pair and updates HUD/best score consistently.
