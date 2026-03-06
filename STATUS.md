@@ -2,8 +2,39 @@
 
 ## Project
 - Name: `experiment-mini-arcade`
-- Workflow: `Implement Flappy Bird-like Game`
+- Workflow: `Implement Anomaly Detection Game`
 - Snapshot Date (UTC): `2026-03-06`
+
+## Task 102 Update (RUN_ID 181)
+Implemented initial anomaly detection game structure by replacing Flappy-specific page wiring with a modular anomaly game scaffold.
+
+### Structure Added
+- Entrypoint:
+  - `js/game.js`
+- Core modules:
+  - `js/anomaly/constants.js`
+  - `js/anomaly/state.js`
+  - `js/anomaly/renderer.js`
+  - `js/anomaly/ui.js`
+- Components:
+  - `js/anomaly/components/grid.js`
+  - `js/anomaly/components/anomalyGenerator.js`
+  - `js/anomaly/components/timer.js`
+
+### What This Setup Provides
+- Centralized game constants and state labels.
+- Dedicated mutable state model for score/lives/level/round status.
+- Grid layout generator and pointer hit-testing component.
+- Round anomaly generation component with level-based variation.
+- Timer component for second-based round countdown.
+- Canvas renderer and HUD/overlay UI adapters.
+- Main controller that wires state transitions (`READY`, `RUNNING`, `PAUSED`, `OVER`), input handling, round flow, and frame loop.
+
+### Verification
+- JavaScript syntax checks:
+  - `node --check` run across all files in `js/` (pass).
+- Static file serving smoke test:
+  - `python3 -m http.server` and `curl` checks for `/`, `/index.html`, `/css/styles.css`, `/js/game.js`, and new module paths (all `200`).
 
 ## Current Development State
 The Flappy Bird-like game is in a **playable MVP** state with core loop, rendering, controls, and persistence implemented.
@@ -156,3 +187,187 @@ Current player flow:
 ### Overall Workflow Verdict
 - PASS
 - Rationale: Browser game structure, controls, scoring, and graphics integration are implemented and internally consistent with acceptance criteria. No automated gameplay test suite exists, so validation is based on static inspection plus HTTP/syntax smoke checks.
+
+## Task 103 Update (RUN_ID 182)
+Implemented core anomaly-detection game logic with dataset-based outlier evaluation and hardened score tracking.
+
+### Logic Implemented
+- Added anomaly evaluation module:
+  - `js/anomaly/components/anomalyEvaluator.js`
+  - Computes normalized deviation per metric (`temperature`, `latency`, `errorRate`) and decides anomaly classification using config thresholds.
+- Refactored round generation:
+  - `js/anomaly/components/anomalyGenerator.js`
+  - Each cell now receives a generated dataset record near a round baseline.
+  - Exactly one record per round is forced beyond anomaly thresholds and used as the target anomaly.
+  - Grid now retains `baseline` and `recordsByCellId` for deterministic selection checks.
+- Updated game controller selection logic:
+  - `js/game.js`
+  - Tile selection is now validated through anomaly evaluation rules instead of static cell id comparison.
+- Expanded score/life bookkeeping:
+  - `js/anomaly/state.js`
+  - Added streak-aware scoring multipliers and counters for correct/wrong/timeout outcomes.
+  - Existing lives/time penalties are preserved and now tracked explicitly.
+- Updated round config and rendering:
+  - `js/anomaly/constants.js` adds scoring and dataset thresholds.
+  - `js/anomaly/renderer.js` renders compact metric triplets on each tile so players identify outliers from data.
+
+### Verification (Task 103)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS
+   - Output: `anomaly.logic.test: ok`
+
+### Acceptance Mapping
+- Run game and ensure it correctly identifies anomalies:
+  - Implemented dataset-driven anomaly classification and round generation guarantees one true outlier.
+- Track user scores:
+  - Score updates on correct picks, life/time penalties on misses/timeouts, and best-score persistence remain active with enhanced tracking fields.
+
+## Task 104 Update (RUN_ID 183)
+Implemented a user-facing interface upgrade for the anomaly detection game with explicit dataset visibility and clearer scoring context.
+
+### UI Enhancements
+- Expanded page layout with new dataset-oriented panels in `index.html`:
+  - `Round Baseline` metrics (`temperature`, `latency`, `errorRate`)
+  - `Last Selection` details showing selected cell and metric values
+  - `Deviation Check` panel showing normalized metric deltas and anomaly verdict
+  - `Round Feed` message area for run/round status updates
+- Added styling for new components in `css/styles.css`:
+  - Responsive 3-card dataset panel (collapses to 1 column on mobile)
+  - Verdict badge states (`pending`, `correct`, `wrong`)
+  - Event feed container and improved metric grid readability
+
+### Runtime Wiring
+- Updated `js/anomaly/ui.js` to bind and validate new DOM nodes, and to render:
+  - Baseline values for active round data
+  - Last selected record values and deviation multipliers
+  - Selection verdict state and round event feed text
+- Extended `js/anomaly/state.js` with UI-facing fields:
+  - `lastSelection`
+  - `roundEvent`
+- Updated `js/game.js` to populate and maintain UI data flow:
+  - Stores last selected record/profile on each pick
+  - Emits round/run event messages for ready, pause, resume, and game-over states
+  - Keeps baseline/score HUD synchronized through existing update cycle
+
+### Verification (Task 104)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS (`anomaly.logic.test: ok`)
+
+### Acceptance Mapping
+- Ensure that the UI is user-friendly:
+  - Met via structured HUD + dataset cards + responsive layout + event feed messaging.
+- Ensure the UI displays the dataset and score correctly:
+  - Met via always-visible score/best/lives/time HUD and explicit baseline/selection/deviation dataset displays.
+
+## Task 105 Update (RUN_ID 184)
+Documented the latest anomaly detection game progress snapshot in this status file and validated the current implementation state.
+
+### Current Anomaly Detection Game Status
+- Game loop and state model are active with lifecycle states:
+  - `LOADING`, `READY`, `RUNNING`, `PAUSED`, `OVER`
+- Round generation is dataset-driven:
+  - Each tile receives metric data for `temperature`, `latency`, and `errorRate`
+  - A single true anomaly is enforced per round relative to a baseline profile
+- Selection logic is evaluation-based (not static id matching):
+  - Picks are checked via normalized deviation thresholds
+  - UI surfaces baseline, selected record values, and deviation profile
+- Player progression and scoring are tracked:
+  - Score, best score, lives, timer, streak, and correct/wrong/timeout counters
+  - Best score remains persisted in `localStorage`
+- UI/UX status:
+  - HUD, dataset cards, verdict badge, and round event feed are integrated
+  - Responsive behavior for dataset panels remains in place for smaller viewports
+
+### Relevant Notes
+- Repository currently has no `package.json` scripts, `Makefile`, or alternate test harness; validation continues through direct Node-based checks.
+- Existing logic tests cover anomaly generation/evaluation behavior (`tests/anomaly.logic.test.mjs`).
+- Remaining risk area is gameplay-level regression coverage (full interaction/e2e path is still manual).
+
+### Verification (Task 105)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS (`anomaly.logic.test: ok`)
+
+### Acceptance Mapping
+- Check that `STATUS.md` is updated with the current status and relevant game notes:
+  - PASS: Added this Task 105 section with implementation status, risks, and verification evidence.
+
+## QA Validation Summary (Workflow #11)
+- QA Date (UTC): `2026-03-06`
+- Branch: `workflow/11/dev`
+- Scope: Validate workflow goal "Implement Anomaly Detection Game" without adding code changes.
+
+### Commits Reviewed (`main..HEAD`)
+- `2f0669b` task/105: update anomaly game progress in status docs
+- `be67af1` task/104: implement anomaly game dataset-focused UI
+- `f6527fd` task/103: implement anomaly detection game logic
+- `fe5bcb2` task/102: setup anomaly detection game structure
+
+### Commands Run and Results
+1. `git log --oneline main..HEAD`
+   - Result: PASS
+   - Output:
+     - `2f0669b task/105: update anomaly game progress in status docs`
+     - `be67af1 task/104: implement anomaly game dataset-focused UI`
+     - `f6527fd task/103: implement anomaly detection game logic`
+     - `fe5bcb2 task/102: setup anomaly detection game structure`
+2. `git diff main...HEAD --stat`
+   - Result: PASS
+   - Output:
+     - `STATUS.md | 142 +++++-`
+     - `TASK_REPORT.md | 36 +-`
+     - `css/styles.css | 245 ++++++---`
+     - `index.html | 100 +++-`
+     - `js/anomaly/components/anomalyEvaluator.js | 63 +++`
+     - `js/anomaly/components/anomalyGenerator.js | 106 ++++`
+     - `js/anomaly/components/grid.js | 48 ++`
+     - `js/anomaly/components/timer.js | 33 ++`
+     - `js/anomaly/constants.js | 40 ++`
+     - `js/anomaly/renderer.js | 77 +++`
+     - `js/anomaly/state.js | 112 +++++`
+     - `js/anomaly/ui.js | 180 +++++++`
+     - `js/game.js | 812 ++++++++----------------------`
+     - `tests/anomaly.logic.test.mjs | 96 ++++`
+     - `14 files changed, 1381 insertions(+), 709 deletions(-)`
+3. `cat package.json | grep -A 20 '"scripts"'`
+   - Result: SKIPPED (repository has no `package.json`)
+   - Output:
+     - `cat: package.json: No such file or directory`
+4. `ls -1 Makefile package.json package-lock.json 2>/dev/null || true`
+   - Result: SKIPPED (no build/test script manifests found)
+   - Output: *(none)*
+5. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+6. `node --input-type=module -e "import('./js/anomaly/state.js').then(()=>console.log('state module import: ok'))"`
+   - Result: PASS
+   - Output:
+     - `state module import: ok`
+7. `node --input-type=module -e "import('./js/anomaly/components/anomalyGenerator.js').then(()=>console.log('generator module import: ok'))"`
+   - Result: PASS
+   - Output:
+     - `generator module import: ok`
+
+### Per-Task Acceptance Verdict
+1. Setup Anomaly Detection Game Structure
+   - Verdict: PASS
+   - Evidence: Modular structure exists (`js/anomaly/*`, `js/anomaly/components/*`, `js/game.js`, `index.html`, `css/styles.css`) with initialized grid/timer/state/renderer/UI wiring.
+2. Implement Game Logic for Anomaly Detection
+   - Verdict: PASS
+   - Evidence: Dataset-based anomaly classification and round generation implemented in `js/anomaly/components/anomalyEvaluator.js` and `js/anomaly/components/anomalyGenerator.js`; score/lives/level/best-score tracking implemented in `js/anomaly/state.js`; logic test passes (`anomaly.logic.test: ok`).
+3. Create User Interface for Anomaly Detection Game
+   - Verdict: PASS
+   - Evidence: `index.html` includes HUD score fields plus baseline/selection/deviation dataset panels and round feed; `js/anomaly/ui.js` binds and updates these fields; `css/styles.css` includes responsive layout (`@media (max-width: 680px)`).
+4. Update `STATUS.md` with Anomaly Detection Game Progress
+   - Verdict: PASS
+   - Evidence: Existing Task 102/103/104/105 sections document structure, logic, UI, verification, and current game status notes.
+
+### Overall Workflow Verdict
+- PASS
+- Rationale: The branch contains a browser-based anomaly detection game with dataset-driven outlier detection, interactive UI, and persistent score tracking; implementation is supported by code inspection and passing logic tests.
