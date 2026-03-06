@@ -824,3 +824,43 @@ Implemented a new top-down racing game scaffold as the active arcade experience,
    - Satisfied by new `index.html` canvas container and `js/game.js` initialization/render path calling renderer on startup.
 2. Verify initial game state is set up without errors:
    - Satisfied by `createRacingState()` defaults (`READY` state, spawn point, timers, input map) and passing syntax/tests/smoke checks.
+
+## Task 125 Update (RUN_ID 205)
+Implemented core racing mechanics for the top-down racing game so keyboard controls drive deterministic movement around the oval track.
+
+### Implementation Details
+- Refined `js/racing/logic.js` to use track-relative movement:
+  - Car now tracks `progressAngle`, `laneOffset`, and `angularVelocity`.
+  - Position and heading are derived each tick from elliptical lane geometry.
+  - Throttle/brake/drag continue to control speed while steering shifts lane position.
+  - Added lane centering, off-track drag, and stronger clamping for stable handling.
+- Reworked lap progression to detect forward start-line crossing via angle checks and enforce `minLapMs` per lap.
+- Preserved and extended state snapshot data for runtime inspection.
+- Added `js/racing/controls.js`:
+  - `mapKeyboardEventCodeToInputPatch(code, pressed)` for explicit keyboard mapping.
+  - `createReleasedInputPatch()` for resetting controls.
+- Updated `js/game.js` to use shared controls mapping and clear active input on `blur` / hidden tab transitions.
+
+### Tests Added/Updated
+- Added `tests/racing.controls.test.mjs` to validate keyboard mapping and release patch behavior.
+- Expanded `tests/racing.logic.test.mjs` to verify:
+  - Track-relative movement from inputs.
+  - Lap completion with sustained forward motion.
+  - Lane shift behavior under steering.
+  - Snapshot compatibility.
+
+### Verification (Task 125)
+1. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs && node tests/racing.controls.test.mjs && node tests/racing.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
+     - `racing.controls.test: ok`
+     - `racing.logic.test: ok`
+
+### Acceptance Mapping (Task 125)
+1. Player can control the icon using keyboard inputs:
+   - Satisfied by `js/racing/controls.js` keyboard mapping, `js/game.js` keydown/keyup integration, and input reset safeguards.
+2. Icon moves around the circular track correctly:
+   - Satisfied by track-relative movement and lap crossing logic in `js/racing/logic.js`, plus passing movement/lap tests in `tests/racing.logic.test.mjs`.

@@ -11,6 +11,7 @@ import {
   getRacingSnapshot
 } from "./racing/logic.js";
 import { createRacingRenderer } from "./racing/renderer.js";
+import { createReleasedInputPatch, mapKeyboardEventCodeToInputPatch } from "./racing/controls.js";
 
 function queryRequiredElement(id) {
   const element = document.getElementById(id);
@@ -40,23 +41,6 @@ function createUIBindings() {
     trackStateValue: queryRequiredElement("trackStateValue"),
     eventValue: queryRequiredElement("eventValue")
   };
-}
-
-function toInputPatch(code, pressed) {
-  if (code === "ArrowUp" || code === "KeyW") {
-    return { throttle: pressed };
-  }
-  if (code === "ArrowDown" || code === "KeyS") {
-    return { brake: pressed };
-  }
-  if (code === "ArrowLeft" || code === "KeyA") {
-    return { steerLeft: pressed };
-  }
-  if (code === "ArrowRight" || code === "KeyD") {
-    return { steerRight: pressed };
-  }
-
-  return null;
 }
 
 function createGameController(ui) {
@@ -114,7 +98,7 @@ function createGameController(ui) {
       return;
     }
 
-    const patch = toInputPatch(event.code, true);
+    const patch = mapKeyboardEventCodeToInputPatch(event.code, true);
     if (patch) {
       event.preventDefault();
       setInputState(state, patch);
@@ -122,11 +106,15 @@ function createGameController(ui) {
   }
 
   function onKeyUp(event) {
-    const patch = toInputPatch(event.code, false);
+    const patch = mapKeyboardEventCodeToInputPatch(event.code, false);
     if (patch) {
       event.preventDefault();
       setInputState(state, patch);
     }
+  }
+
+  function releaseAllInput() {
+    setInputState(state, createReleasedInputPatch());
   }
 
   function bindEvents() {
@@ -135,6 +123,12 @@ function createGameController(ui) {
     ui.resetButton.addEventListener("click", resetRace);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", releaseAllInput);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        releaseAllInput();
+      }
+    });
   }
 
   function frame(nowMs) {

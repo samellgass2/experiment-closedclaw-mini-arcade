@@ -5,6 +5,8 @@ export const RACING_STATUS = {
   OVER: "OVER"
 };
 
+const TWO_PI = Math.PI * 2;
+
 export const RACING_DEFAULTS = {
   canvasWidth: 960,
   canvasHeight: 600,
@@ -14,9 +16,12 @@ export const RACING_DEFAULTS = {
   acceleration: 420,
   braking: 520,
   drag: 260,
-  offTrackDrag: 600,
+  offTrackDrag: 700,
   steeringRate: 3.1,
   offTrackGripPenalty: 0.6,
+  laneShiftRate: 1.15,
+  laneCenteringRate: 0.38,
+  minLapMs: 1500,
   bestLapStorageKey: "mini-arcade-racing-best-lap"
 };
 
@@ -26,6 +31,27 @@ function clamp(value, min, max) {
 
 function sanitizeNumber(value, fallback) {
   return Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeAngle(angle) {
+  const wrapped = angle % TWO_PI;
+  return wrapped < 0 ? wrapped + TWO_PI : wrapped;
+}
+
+function crossedAngleForward(previousAngle, currentAngle, targetAngle) {
+  const prev = normalizeAngle(previousAngle);
+  const curr = normalizeAngle(currentAngle);
+  const target = normalizeAngle(targetAngle);
+
+  if (prev === curr) {
+    return false;
+  }
+
+  if (curr > prev) {
+    return target > prev && target <= curr;
+  }
+
+  return target > prev || target <= curr;
 }
 
 function readBestLapMs(storage, key) {
@@ -60,6 +86,9 @@ export function createRacingConfig(overrides = {}) {
     drag: Math.max(0, sanitizeNumber(overrides.drag, RACING_DEFAULTS.drag)),
     offTrackDrag: Math.max(0, sanitizeNumber(overrides.offTrackDrag, RACING_DEFAULTS.offTrackDrag)),
     steeringRate: Math.max(0.1, sanitizeNumber(overrides.steeringRate, RACING_DEFAULTS.steeringRate)),
+    laneShiftRate: Math.max(0.1, sanitizeNumber(overrides.laneShiftRate, RACING_DEFAULTS.laneShiftRate)),
+    laneCenteringRate: Math.max(0, sanitizeNumber(overrides.laneCenteringRate, RACING_DEFAULTS.laneCenteringRate)),
+    minLapMs: Math.max(500, sanitizeNumber(overrides.minLapMs, RACING_DEFAULTS.minLapMs)),
     offTrackGripPenalty: clamp(
       sanitizeNumber(overrides.offTrackGripPenalty, RACING_DEFAULTS.offTrackGripPenalty),
       0.1,
@@ -77,8 +106,10 @@ export function createDefaultTrack(width, height) {
   const innerRadiusY = height * 0.21;
 
   const startAngle = -Math.PI / 2;
-  const spawnRadiusX = (outerRadiusX + innerRadiusX) / 2;
-  const spawnRadiusY = (outerRadiusY + innerRadiusY) / 2;
+  const centerlineRadiusX = (outerRadiusX + innerRadiusX) / 2;
+  const centerlineRadiusY = (outerRadiusY + innerRadiusY) / 2;
+  const laneHalfWidthX = (outerRadiusX - innerRadiusX) / 2;
+  const laneHalfWidthY = (outerRadiusY - innerRadiusY) / 2;
 
   return {
     centerX,
@@ -87,14 +118,18 @@ export function createDefaultTrack(width, height) {
     outerRadiusY,
     innerRadiusX,
     innerRadiusY,
+    centerlineRadiusX,
+    centerlineRadiusY,
+    laneHalfWidthX,
+    laneHalfWidthY,
     startLine: {
       angle: startAngle,
       width: 40
     },
     spawnPoint: {
-      x: centerX + Math.cos(startAngle) * spawnRadiusX,
-      y: centerY + Math.sin(startAngle) * spawnRadiusY,
-      heading: 0
+      heading: 0,
+      progressAngle: startAngle,
+      laneOffset: 0
     }
   };
 }
@@ -111,13 +146,30 @@ export function isCarOnTrack(track, car) {
   return outerDistance <= 1 && innerDistance >= 1;
 }
 
+function updateCarPoseFromTrack(track, car) {
+  const laneX = track.centerlineRadiusX + (track.laneHalfWidthX * car.laneOffset);
+  const laneY = track.centerlineRadiusY + (track.laneHalfWidthY * car.laneOffset);
+
+  const safeLaneX = Math.max(8, laneX);
+  const safeLaneY = Math.max(8, laneY);
+
+  car.x = track.centerX + (Math.cos(car.progressAngle) * safeLaneX);
+  car.y = track.centerY + (Math.sin(car.progressAngle) * safeLaneY);
+
+  const tangentX = -Math.sin(car.progressAngle) * safeLaneX;
+  const tangentY = Math.cos(car.progressAngle) * safeLaneY;
+
+  car.heading = Math.atan2(tangentY, tangentX);
+  car.offTrack = !isCarOnTrack(track, car);
+}
+
 export function createRacingState(configOverrides = {}, runtime = {}) {
   const config = createRacingConfig(configOverrides);
   const storage = runtime.storage ?? (typeof window !== "undefined" ? window.localStorage : null);
   const track = createDefaultTrack(config.canvasWidth, config.canvasHeight);
   const bestLapMs = readBestLapMs(storage, config.bestLapStorageKey);
 
-  return {
+  const state = {
     config,
     storage,
     track,
@@ -133,15 +185,18 @@ export function createRacingState(configOverrides = {}, runtime = {}) {
     finishReason: null,
     eventMessage: "Press Start Race to begin.",
     car: {
-      x: track.spawnPoint.x,
-      y: track.spawnPoint.y,
+      x: track.centerX,
+      y: track.centerY,
       heading: track.spawnPoint.heading,
       speed: 0,
       steer: 0,
       width: 22,
       length: 38,
       offTrack: false,
-      crossedStartGate: false
+      crossedStartGate: false,
+      progressAngle: track.spawnPoint.progressAngle,
+      laneOffset: track.spawnPoint.laneOffset,
+      angularVelocity: 0
     },
     input: {
       throttle: false,
@@ -150,10 +205,13 @@ export function createRacingState(configOverrides = {}, runtime = {}) {
       steerRight: false
     }
   };
+
+  updateCarPoseFromTrack(track, state.car);
+  return state;
 }
 
 export function resetRacingState(state) {
-  const track = state.track;
+  const { track, car } = state;
 
   state.status = RACING_STATUS.READY;
   state.startedAtMs = null;
@@ -166,14 +224,16 @@ export function resetRacingState(state) {
   state.finishReason = null;
   state.eventMessage = "Press Start Race to begin.";
 
-  state.car.x = track.spawnPoint.x;
-  state.car.y = track.spawnPoint.y;
-  state.car.heading = track.spawnPoint.heading;
-  state.car.speed = 0;
-  state.car.steer = 0;
-  state.car.offTrack = false;
-  state.car.crossedStartGate = false;
+  car.heading = track.spawnPoint.heading;
+  car.speed = 0;
+  car.steer = 0;
+  car.offTrack = false;
+  car.crossedStartGate = false;
+  car.progressAngle = track.spawnPoint.progressAngle;
+  car.laneOffset = track.spawnPoint.laneOffset;
+  car.angularVelocity = 0;
 
+  updateCarPoseFromTrack(track, car);
   return state;
 }
 
@@ -228,6 +288,7 @@ function applySteeringAndSpeed(state, dtSec) {
   const { car, input, config } = state;
   const steeringInput = (input.steerRight ? 1 : 0) - (input.steerLeft ? 1 : 0);
   const steeringGrip = car.offTrack ? config.offTrackGripPenalty : 1;
+
   car.steer = steeringInput;
 
   if (input.throttle && !input.brake) {
@@ -258,34 +319,50 @@ function applySteeringAndSpeed(state, dtSec) {
 
   car.speed = clamp(car.speed, -config.reverseSpeed, config.maxSpeed);
 
-  const turnStrength = (car.speed / config.maxSpeed) * config.steeringRate * steeringGrip;
-  car.heading += steeringInput * turnStrength * dtSec;
-}
-
-function applyPosition(state, dtSec) {
-  const { car } = state;
-
-  car.x += Math.cos(car.heading) * car.speed * dtSec;
-  car.y += Math.sin(car.heading) * car.speed * dtSec;
-
-  car.offTrack = !isCarOnTrack(state.track, car);
-}
-
-function updateLapProgress(state) {
-  const { car, track } = state;
-  const deltaY = car.y - track.centerY;
-  const nearStartX = Math.abs(car.x - track.centerX) <= track.startLine.width;
-
-  if (deltaY < -track.innerRadiusY && nearStartX) {
-    car.crossedStartGate = true;
+  const laneShift = steeringInput * config.laneShiftRate * steeringGrip * dtSec;
+  if (laneShift !== 0) {
+    car.laneOffset += laneShift;
+  } else if (car.laneOffset !== 0) {
+    const centerPull = config.laneCenteringRate * dtSec;
+    if (Math.abs(car.laneOffset) <= centerPull) {
+      car.laneOffset = 0;
+    } else {
+      car.laneOffset += car.laneOffset > 0 ? -centerPull : centerPull;
+    }
   }
 
-  const crossingFinish = deltaY >= -track.innerRadiusY && nearStartX && car.crossedStartGate;
-  if (!crossingFinish) {
+  // Allow small overshoot so off-track penalties can engage, then clamp hard.
+  car.laneOffset = clamp(car.laneOffset, -1.25, 1.25);
+}
+
+function applyTrackMovement(state, dtSec) {
+  const { car, track } = state;
+  const laneRadiusX = Math.max(12, track.centerlineRadiusX + (track.laneHalfWidthX * car.laneOffset));
+  const laneRadiusY = Math.max(12, track.centerlineRadiusY + (track.laneHalfWidthY * car.laneOffset));
+  const radiusScale = Math.sqrt(laneRadiusX * laneRadiusY);
+
+  const angularVelocity = radiusScale > 0 ? (car.speed / radiusScale) : 0;
+  car.angularVelocity = angularVelocity;
+
+  const previousAngle = car.progressAngle;
+  car.progressAngle += angularVelocity * dtSec;
+
+  updateCarPoseFromTrack(track, car);
+  return previousAngle;
+}
+
+function updateLapProgress(state, previousAngle) {
+  const { car, track, config } = state;
+
+  if (car.speed <= 0) {
     return;
   }
 
-  car.crossedStartGate = false;
+  const crossedStart = crossedAngleForward(previousAngle, car.progressAngle, track.startLine.angle);
+  if (!crossedStart || state.currentLapMs < config.minLapMs) {
+    return;
+  }
+
   state.completedLaps += 1;
   state.lapTimesMs.push(state.currentLapMs);
 
@@ -316,8 +393,8 @@ export function tickRace(state, nowMs = 0) {
   state.currentLapMs += dtMs;
 
   applySteeringAndSpeed(state, dtSec);
-  applyPosition(state, dtSec);
-  updateLapProgress(state);
+  const previousAngle = applyTrackMovement(state, dtSec);
+  updateLapProgress(state, previousAngle);
 
   return state;
 }
@@ -339,7 +416,10 @@ export function getRacingSnapshot(state) {
       heading: state.car.heading,
       speed: state.car.speed,
       steer: state.car.steer,
-      offTrack: state.car.offTrack
+      offTrack: state.car.offTrack,
+      laneOffset: state.car.laneOffset,
+      progressAngle: state.car.progressAngle,
+      angularVelocity: state.car.angularVelocity
     }
   };
 }
