@@ -1,53 +1,44 @@
 # TASK REPORT
 
 ## Task
-- TASK_ID: 102
-- RUN_ID: 181
-- Title: Setup Anomaly Detection Game Structure
+- TASK_ID: 103
+- RUN_ID: 182
+- Title: Implement Game Logic for Anomaly Detection
 
 ## Summary
-Implemented the initial anomaly detection game scaffold by converting the project from a Flappy-specific setup to a modular anomaly game structure with reusable core components.
+Implemented and validated the core anomaly-detection gameplay logic by shifting round validation to dataset outlier detection and strengthening score/life tracking behavior.
 
 ## Files Changed
-- `index.html`
-- `css/styles.css`
 - `js/game.js`
 - `js/anomaly/constants.js`
 - `js/anomaly/state.js`
 - `js/anomaly/renderer.js`
-- `js/anomaly/ui.js`
-- `js/anomaly/components/grid.js`
 - `js/anomaly/components/anomalyGenerator.js`
-- `js/anomaly/components/timer.js`
+- `js/anomaly/components/anomalyEvaluator.js`
+- `tests/anomaly.logic.test.mjs`
 - `STATUS.md`
 - `TASK_REPORT.md`
 
 ## Implementation Details
-- Reworked page structure and HUD for anomaly detection gameplay.
-- Switched script loading to ES modules (`type="module"`).
-- Added dedicated anomaly game modules for:
-  - configuration/state constants
-  - mutable game state and progression updates
-  - grid creation + cell hit-testing
-  - anomaly-cell generation per round
-  - timer lifecycle and tick processing
-  - canvas rendering pipeline
-  - HUD + overlay UI bindings
-- Implemented a controller entrypoint that wires:
-  - state transitions (`READY`, `RUNNING`, `PAUSED`, `OVER`)
-  - pointer and keyboard controls (`Click`, `Enter`, `P`, `R`)
-  - per-round creation and timeout handling
-  - score, best score, lives, level, and timer updates
+- Added a new anomaly-evaluation component that computes normalized deviations from a per-round baseline and classifies selections using configurable thresholds.
+- Refactored round generation so each tile carries synthetic dataset metrics (`temperature`, `latency`, `errorRate`) with exactly one outlier generated per round.
+- Updated selection handling to validate player picks through anomaly evaluation rules.
+- Expanded score state handling with streak-aware scoring and explicit counters for correct/wrong/timeout outcomes.
+- Extended config with scoring and dataset threshold settings.
+- Updated tile rendering to display compact metric readouts that support visual outlier detection.
+- Added a Node-based logic test suite covering:
+  - scoring/life/time transitions
+  - anomaly round generation integrity
+  - correct/incorrect selection classification
 
 ## Verification
-- Test discovery:
-  - No `package.json`, `Makefile`, or Python test config found.
-- JavaScript syntax:
-  - `find js -type f -name '*.js' -print -exec node --check {} \;` (pass)
-- Static asset/module route checks:
-  - `python3 -m http.server 8123` + `curl` checks for `/`, `/index.html`, `/css/styles.css`, `/js/game.js`, and new module files (all `200`).
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - PASS
+2. `node tests/anomaly.logic.test.mjs`
+   - PASS (`anomaly.logic.test: ok`)
 
 ## Acceptance Test Mapping
-- Verify game structure is created with necessary files and components set up: **met**
-  - New anomaly game module hierarchy exists and is wired from `index.html` through `js/game.js`.
-  - Core components (state, grid, anomaly generator, timer, renderer, UI) are implemented and integrated.
+- Ensure game correctly identifies anomalies: **met**
+  - Runtime selection checks now evaluate dataset deviation rules rather than static marker matching.
+- Ensure user scores are tracked: **met**
+  - Correct picks award score (with streak bonus), misses/timeouts apply penalties, and best score remains persisted.

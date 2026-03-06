@@ -9,6 +9,7 @@ import {
 } from "./anomaly/state.js";
 import { createGridLayout, locateCellAt } from "./anomaly/components/grid.js";
 import { generateRoundGrid } from "./anomaly/components/anomalyGenerator.js";
+import { evaluateSelectedCell } from "./anomaly/components/anomalyEvaluator.js";
 import { createTimer, startTimer, pauseTimer, tickTimer } from "./anomaly/components/timer.js";
 import { createUIBindings, updateHUD, showOverlay, hideOverlay } from "./anomaly/ui.js";
 import { renderGameFrame } from "./anomaly/renderer.js";
@@ -113,7 +114,9 @@ function processSelection(pointerX, pointerY) {
 
   state.selectedCellId = selectedCell.id;
 
-  if (selectedCell.id === state.activeGrid.anomalyCellId) {
+  const evaluation = evaluateSelectedCell(state.activeGrid, selectedCell.id, BASE_CONFIG.dataset);
+
+  if (evaluation.isAnomaly) {
     applyRoundSuccess();
     return;
   }
@@ -191,7 +194,7 @@ function initialize() {
   showOverlay(
     ui,
     "Anomaly Detector",
-    "Click start and find the odd tile each round. Wrong picks cost lives and time.",
+    "Click start and find the outlier record each round. Wrong picks cost lives and time.",
     "Start Game"
   );
 

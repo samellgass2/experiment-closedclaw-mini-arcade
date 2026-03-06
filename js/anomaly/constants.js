@@ -27,5 +27,14 @@ export const BASE_CONFIG = {
   anomalyHueOffset: 16,
   levelUpEvery: 4,
   minRoundDuration: 7,
-  timerPenaltyOnMiss: 2
+  timerPenaltyOnMiss: 2,
+  scorePerCorrect: 10,
+  streakBonusCap: 4,
+  dataset: {
+    temperatureTolerance: 1.5,
+    latencyTolerance: 9,
+    errorRateTolerance: 0.2,
+    minSingleMetricDeviation: 1.35,
+    totalDeviationThreshold: 2.4
+  }
 };

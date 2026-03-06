@@ -35,6 +35,10 @@ export function createGameState() {
     selectedCellId: null,
     debug: {
       roundsPlayed: 0,
+      correctSelections: 0,
+      wrongSelections: 0,
+      timeoutCount: 0,
+      currentStreak: 0,
       lastResult: "none"
     }
   };
@@ -56,13 +60,23 @@ export function resetRunState(state) {
   state.selectedCellId = null;
   state.activeGrid = null;
   state.debug.roundsPlayed = 0;
+  state.debug.correctSelections = 0;
+  state.debug.wrongSelections = 0;
+  state.debug.timeoutCount = 0;
+  state.debug.currentStreak = 0;
   state.debug.lastResult = "none";
 }
 
 export function applyCorrectSelection(state) {
-  state.score += 10;
+  const streakMultiplier = Math.min(
+    BASE_CONFIG.streakBonusCap,
+    1 + Math.floor(state.debug.currentStreak / 3)
+  );
+  state.score += BASE_CONFIG.scorePerCorrect * streakMultiplier;
   state.debug.lastResult = "correct";
   state.debug.roundsPlayed += 1;
+  state.debug.correctSelections += 1;
+  state.debug.currentStreak += 1;
 
   const nextLevel = 1 + Math.floor(state.debug.roundsPlayed / BASE_CONFIG.levelUpEvery);
   state.level = Math.max(state.level, nextLevel);
@@ -78,10 +92,14 @@ export function applyWrongSelection(state) {
   state.lives = Math.max(0, state.lives - 1);
   state.remainingSeconds = Math.max(0, state.remainingSeconds - BASE_CONFIG.timerPenaltyOnMiss);
   state.debug.lastResult = "wrong";
+  state.debug.wrongSelections += 1;
+  state.debug.currentStreak = 0;
 }
 
 export function applyRoundTimeout(state) {
   state.lives = Math.max(0, state.lives - 1);
   state.debug.lastResult = "timeout";
+  state.debug.timeoutCount += 1;
+  state.debug.currentStreak = 0;
   state.remainingSeconds = BASE_CONFIG.roundDurationSeconds;
 }

@@ -187,3 +187,39 @@ Current player flow:
 ### Overall Workflow Verdict
 - PASS
 - Rationale: Browser game structure, controls, scoring, and graphics integration are implemented and internally consistent with acceptance criteria. No automated gameplay test suite exists, so validation is based on static inspection plus HTTP/syntax smoke checks.
+
+## Task 103 Update (RUN_ID 182)
+Implemented core anomaly-detection game logic with dataset-based outlier evaluation and hardened score tracking.
+
+### Logic Implemented
+- Added anomaly evaluation module:
+  - `js/anomaly/components/anomalyEvaluator.js`
+  - Computes normalized deviation per metric (`temperature`, `latency`, `errorRate`) and decides anomaly classification using config thresholds.
+- Refactored round generation:
+  - `js/anomaly/components/anomalyGenerator.js`
+  - Each cell now receives a generated dataset record near a round baseline.
+  - Exactly one record per round is forced beyond anomaly thresholds and used as the target anomaly.
+  - Grid now retains `baseline` and `recordsByCellId` for deterministic selection checks.
+- Updated game controller selection logic:
+  - `js/game.js`
+  - Tile selection is now validated through anomaly evaluation rules instead of static cell id comparison.
+- Expanded score/life bookkeeping:
+  - `js/anomaly/state.js`
+  - Added streak-aware scoring multipliers and counters for correct/wrong/timeout outcomes.
+  - Existing lives/time penalties are preserved and now tracked explicitly.
+- Updated round config and rendering:
+  - `js/anomaly/constants.js` adds scoring and dataset thresholds.
+  - `js/anomaly/renderer.js` renders compact metric triplets on each tile so players identify outliers from data.
+
+### Verification (Task 103)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS
+   - Output: `anomaly.logic.test: ok`
+
+### Acceptance Mapping
+- Run game and ensure it correctly identifies anomalies:
+  - Implemented dataset-driven anomaly classification and round generation guarantees one true outlier.
+- Track user scores:
+  - Score updates on correct picks, life/time penalties on misses/timeouts, and best-score persistence remain active with enhanced tracking fields.

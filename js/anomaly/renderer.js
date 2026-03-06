@@ -30,11 +30,14 @@ function drawTile(ctx, cell, selectedCellId) {
     ctx.stroke();
   }
 
-  ctx.fillStyle = "rgba(16, 30, 27, 0.24)";
-  ctx.font = "600 18px Avenir Next";
+  const [temp, latency, errorRate] = cell.label.split("|");
+  ctx.fillStyle = "rgba(16, 30, 27, 0.58)";
+  ctx.font = "700 11px Menlo, Monaco, Consolas, monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(cell.label, cell.x + cell.width / 2, cell.y + cell.height / 2);
+  ctx.fillText(`T ${temp}`, cell.x + cell.width / 2, cell.y + cell.height / 2 - 12);
+  ctx.fillText(`L ${latency}`, cell.x + cell.width / 2, cell.y + cell.height / 2);
+  ctx.fillText(`E ${errorRate}`, cell.x + cell.width / 2, cell.y + cell.height / 2 + 12);
 }
 
 function drawStateBanner(ctx, canvas, label, color) {
