@@ -1,33 +1,27 @@
 # TASK REPORT
 
 ## Task
-- TASK_ID: 104
-- RUN_ID: 183
-- Title: Create User Interface for Anomaly Detection Game
+- TASK_ID: 105
+- RUN_ID: 184
+- Title: Update STATUS.md with Anomaly Detection Game Progress
 
 ## Summary
-Implemented a complete UI pass for the anomaly detection game that makes both scoring and dataset information explicit during gameplay.
+Updated `STATUS.md` with a new Task 105 progress section that captures the current anomaly detection game implementation state, relevant notes, and fresh validation evidence.
 
 ## Files Changed
-- `index.html`
-- `css/styles.css`
-- `js/anomaly/state.js`
-- `js/anomaly/ui.js`
-- `js/game.js`
 - `STATUS.md`
 - `TASK_REPORT.md`
 
 ## Implementation Details
-- Added a new dataset insight section to the game page with three cards:
-  - round baseline metrics
-  - last selected record metrics
-  - normalized deviation profile with anomaly verdict
-- Added a dedicated round event feed for user-facing game-state messaging.
-- Extended UI bindings and HUD update logic to render all new fields safely.
-- Extended game state with persistent UI context fields (`lastSelection`, `roundEvent`).
-- Wired runtime selection handling to persist and display dataset values and anomaly evaluation profile from each user click.
-- Added pause/resume/ready/game-over event text updates to improve UX clarity.
-- Expanded CSS for responsive dataset panels, metric rows, verdict badges, and feed styling.
+- Appended a dedicated `Task 105 Update (RUN_ID 184)` section to `STATUS.md`.
+- Documented current gameplay status across:
+  - game lifecycle states
+  - dataset-based anomaly generation and evaluation
+  - scoring/progression tracking and persistence
+  - user-facing HUD/dataset panel behavior
+- Added relevant project notes on test harness availability and current residual risks.
+- Added Task 105 verification command results to the status document.
+- Mapped the task acceptance requirement directly to the new status entry.
 
 ## Verification
 1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
@@ -36,7 +30,5 @@ Implemented a complete UI pass for the anomaly detection game that makes both sc
    - PASS (`anomaly.logic.test: ok`)
 
 ## Acceptance Test Mapping
-- Ensure that the UI is user-friendly: **met**
-  - Clear HUD, explicit data cards, and round feed improve readability and usability.
-- Ensure that the UI displays the dataset and score correctly: **met**
-  - Score fields remain live and dataset baseline + selected record + deviation metrics are displayed in real time.
+- Check that `STATUS.md` is updated with the current status and any relevant notes about the game: **met**
+  - `STATUS.md` now includes a Task 105 section with current state, notes, and verification.

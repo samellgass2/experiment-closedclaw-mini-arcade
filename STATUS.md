@@ -262,3 +262,37 @@ Implemented a user-facing interface upgrade for the anomaly detection game with 
   - Met via structured HUD + dataset cards + responsive layout + event feed messaging.
 - Ensure the UI displays the dataset and score correctly:
   - Met via always-visible score/best/lives/time HUD and explicit baseline/selection/deviation dataset displays.
+
+## Task 105 Update (RUN_ID 184)
+Documented the latest anomaly detection game progress snapshot in this status file and validated the current implementation state.
+
+### Current Anomaly Detection Game Status
+- Game loop and state model are active with lifecycle states:
+  - `LOADING`, `READY`, `RUNNING`, `PAUSED`, `OVER`
+- Round generation is dataset-driven:
+  - Each tile receives metric data for `temperature`, `latency`, and `errorRate`
+  - A single true anomaly is enforced per round relative to a baseline profile
+- Selection logic is evaluation-based (not static id matching):
+  - Picks are checked via normalized deviation thresholds
+  - UI surfaces baseline, selected record values, and deviation profile
+- Player progression and scoring are tracked:
+  - Score, best score, lives, timer, streak, and correct/wrong/timeout counters
+  - Best score remains persisted in `localStorage`
+- UI/UX status:
+  - HUD, dataset cards, verdict badge, and round event feed are integrated
+  - Responsive behavior for dataset panels remains in place for smaller viewports
+
+### Relevant Notes
+- Repository currently has no `package.json` scripts, `Makefile`, or alternate test harness; validation continues through direct Node-based checks.
+- Existing logic tests cover anomaly generation/evaluation behavior (`tests/anomaly.logic.test.mjs`).
+- Remaining risk area is gameplay-level regression coverage (full interaction/e2e path is still manual).
+
+### Verification (Task 105)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS (`anomaly.logic.test: ok`)
+
+### Acceptance Mapping
+- Check that `STATUS.md` is updated with the current status and relevant game notes:
+  - PASS: Added this Task 105 section with implementation status, risks, and verification evidence.
