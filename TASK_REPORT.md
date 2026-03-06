@@ -1,46 +1,39 @@
-# Task Report: TASK_ID 157 (RUN_ID 245)
+# Task Report: TASK_ID 158 (RUN_ID 248)
 
 ## Summary
-Implemented dashboard layout adjustments to improve coherence and tile interactions. The dashboard is now split into clear control and active-board panels, and drag-and-drop rearrangement uses explicit drop slots for predictable reordering (including first/last placement).
+Enhanced dashboard game tile readability so each tile clearly shows both the game name and current score at all times.
 
 ## Changes
-- Updated dashboard component structure: `js/dashboard/component.js`
-  - introduced a two-panel layout (`Catalog Controls` + `Active Board`)
-  - added live tile count display (`current/max`)
-  - replaced tile-to-tile drop targeting with explicit insertion slots between tiles
-  - added deterministic drop handling via insertion index
-  - preserved add/remove/move-left/move-right behavior
-- Enhanced tile rendering: `js/dashboard/gameTile.js`
-  - added tile position label (`Slot X of N`)
-  - added drag guidance text for discoverability
-  - kept score rendering and tile action controls
-- Extended dashboard logic: `js/dashboard/logic.js`
-  - added `repositionDashboardTile(state, tileId, insertionIndex)`
-  - supports insertion-style moves with proper index normalization and no-op/out-of-range handling
-- Refined styling: `css/styles.css`
-  - added panelized dashboard layout styles
-  - added drop-slot styling and active drag target states
-  - added responsive behavior for panel stacking on smaller screens
-  - updated tile heading/position/hint visuals
-- Expanded tests: `tests/dashboard.logic.test.mjs`
-  - added coverage for insertion-index reordering via `repositionDashboardTile`
-  - validates forward, backward, no-op, and out-of-range cases
+- Updated tile rendering in `js/dashboard/gameTile.js`:
+  - added robust text normalization fallbacks for missing/blank game fields
+  - added `data-game-name` and improved tile `aria-label` content
+  - introduced a high-visibility score badge in the tile header (`.tile-score-badge`)
+  - upgraded score block formatting to emphasize numeric value
+  - ensured score updates refresh both score value and score badge text
+- Updated styles in `css/styles.css`:
+  - increased tile minimum height and spacing for clearer hierarchy
+  - redesigned tile header into a grid layout for title, score badge, and slot position
+  - increased contrast and font weight for game name and score text
+  - improved score card styling and numeric prominence
+  - added mobile-specific header layout adjustments to keep name/score readable on narrow screens
 
 ## Verification
 Executed:
-- `for f in tests/*.test.mjs; do node "$f"; done`
-- `node --check js/dashboard/component.js && node --check js/dashboard/gameTile.js && node --check js/dashboard/logic.js`
+- `for f in tests/*.mjs; do node "$f" || exit 1; done`
 
 Results:
-- PASS: all test files passed
-- PASS: updated dashboard modules passed syntax checks
+- PASS: `anomaly.logic.test.mjs`
+- PASS: `clicker.logic.test.mjs`
+- PASS: `color-match.logic.test.mjs`
+- PASS: `dashboard.logic.test.mjs`
+- PASS: `racing.controls.test.mjs`
+- PASS: `racing.logic.test.mjs`
+- PASS: `storage.score.test.mjs`
 
 ## Acceptance Coverage
-- Add game tiles: PASS
-  - unchanged add flow retained and validated by existing logic tests
-- Remove game tiles: PASS
-  - unchanged remove flow retained and validated by existing logic tests
-- Rearrange game tiles: PASS
-  - directional move buttons remain functional
-  - drag-and-drop now uses explicit drop slots for reliable insertion ordering
-  - insertion-style logic validated with new unit tests
+- Game tile visibility: PASS
+  - tile title has stronger contrast/weight and layout priority
+  - score is now shown in two clear locations (header badge + score row)
+- Required tile information display: PASS
+  - each tile continues to include game name and current score, with fallback-safe rendering
+  - score updates in the component keep displayed values synchronized

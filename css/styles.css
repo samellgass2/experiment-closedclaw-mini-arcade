@@ -214,14 +214,14 @@ body {
 .dashboard-tile {
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 12px;
+  padding: 12px 12px 10px;
   background:
     linear-gradient(165deg, rgba(255, 255, 255, 0.9), rgba(244, 250, 255, 0.95)),
     radial-gradient(circle at 80% 5%, var(--accent-soft), transparent 40%);
-  min-height: 185px;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
 .dashboard-tile.is-dragging {
@@ -229,29 +229,52 @@ body {
 }
 
 .tile-heading-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "title score"
+    "position position";
+  align-items: center;
   gap: 8px;
 }
 
 .tile-title {
+  grid-area: title;
   margin: 0;
-  font-size: 1.08rem;
+  font-size: 1.1rem;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #0c1f2e;
+}
+
+.tile-score-badge {
+  grid-area: score;
+  margin: 0;
+  border-radius: 999px;
+  border: 1px solid #e3a37f;
+  background: #fff2e8;
+  color: #88390f;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  white-space: nowrap;
 }
 
 .tile-position {
+  grid-area: position;
   margin: 0;
   font-size: 0.78rem;
-  color: #546a7a;
+  color: #3e5668;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.65px;
   white-space: nowrap;
 }
 
 .tile-summary {
   margin: 0;
-  color: var(--muted);
+  color: #31495b;
   line-height: 1.35;
   flex: 1;
 }
@@ -259,7 +282,7 @@ body {
 .tile-meta {
   margin: 0;
   font-size: 0.85rem;
-  color: #5a7080;
+  color: #385160;
   text-transform: uppercase;
   letter-spacing: 0.7px;
 }
@@ -272,17 +295,25 @@ body {
 
 .tile-score {
   margin: 0;
-  padding: 7px 9px;
+  padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #d2e0ea;
-  background: #f6fbff;
-  color: #2a4253;
-  font-size: 0.92rem;
+  border: 1px solid #b6cadb;
+  background: linear-gradient(180deg, #f8fbff, #eef5fb);
+  color: #1d3748;
+  font-size: 0.8rem;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .tile-score-value {
-  color: var(--ink);
-  font-size: 1rem;
+  color: #0f2333;
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .tile-controls {
@@ -343,5 +374,14 @@ body {
 
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tile-heading-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "title"
+      "score"
+      "position";
+    justify-items: start;
   }
 }
