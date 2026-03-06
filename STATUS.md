@@ -296,3 +296,78 @@ Documented the latest anomaly detection game progress snapshot in this status fi
 ### Acceptance Mapping
 - Check that `STATUS.md` is updated with the current status and relevant game notes:
   - PASS: Added this Task 105 section with implementation status, risks, and verification evidence.
+
+## QA Validation Summary (Workflow #11)
+- QA Date (UTC): `2026-03-06`
+- Branch: `workflow/11/dev`
+- Scope: Validate workflow goal "Implement Anomaly Detection Game" without adding code changes.
+
+### Commits Reviewed (`main..HEAD`)
+- `2f0669b` task/105: update anomaly game progress in status docs
+- `be67af1` task/104: implement anomaly game dataset-focused UI
+- `f6527fd` task/103: implement anomaly detection game logic
+- `fe5bcb2` task/102: setup anomaly detection game structure
+
+### Commands Run and Results
+1. `git log --oneline main..HEAD`
+   - Result: PASS
+   - Output:
+     - `2f0669b task/105: update anomaly game progress in status docs`
+     - `be67af1 task/104: implement anomaly game dataset-focused UI`
+     - `f6527fd task/103: implement anomaly detection game logic`
+     - `fe5bcb2 task/102: setup anomaly detection game structure`
+2. `git diff main...HEAD --stat`
+   - Result: PASS
+   - Output:
+     - `STATUS.md | 142 +++++-`
+     - `TASK_REPORT.md | 36 +-`
+     - `css/styles.css | 245 ++++++---`
+     - `index.html | 100 +++-`
+     - `js/anomaly/components/anomalyEvaluator.js | 63 +++`
+     - `js/anomaly/components/anomalyGenerator.js | 106 ++++`
+     - `js/anomaly/components/grid.js | 48 ++`
+     - `js/anomaly/components/timer.js | 33 ++`
+     - `js/anomaly/constants.js | 40 ++`
+     - `js/anomaly/renderer.js | 77 +++`
+     - `js/anomaly/state.js | 112 +++++`
+     - `js/anomaly/ui.js | 180 +++++++`
+     - `js/game.js | 812 ++++++++----------------------`
+     - `tests/anomaly.logic.test.mjs | 96 ++++`
+     - `14 files changed, 1381 insertions(+), 709 deletions(-)`
+3. `cat package.json | grep -A 20 '"scripts"'`
+   - Result: SKIPPED (repository has no `package.json`)
+   - Output:
+     - `cat: package.json: No such file or directory`
+4. `ls -1 Makefile package.json package-lock.json 2>/dev/null || true`
+   - Result: SKIPPED (no build/test script manifests found)
+   - Output: *(none)*
+5. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+6. `node --input-type=module -e "import('./js/anomaly/state.js').then(()=>console.log('state module import: ok'))"`
+   - Result: PASS
+   - Output:
+     - `state module import: ok`
+7. `node --input-type=module -e "import('./js/anomaly/components/anomalyGenerator.js').then(()=>console.log('generator module import: ok'))"`
+   - Result: PASS
+   - Output:
+     - `generator module import: ok`
+
+### Per-Task Acceptance Verdict
+1. Setup Anomaly Detection Game Structure
+   - Verdict: PASS
+   - Evidence: Modular structure exists (`js/anomaly/*`, `js/anomaly/components/*`, `js/game.js`, `index.html`, `css/styles.css`) with initialized grid/timer/state/renderer/UI wiring.
+2. Implement Game Logic for Anomaly Detection
+   - Verdict: PASS
+   - Evidence: Dataset-based anomaly classification and round generation implemented in `js/anomaly/components/anomalyEvaluator.js` and `js/anomaly/components/anomalyGenerator.js`; score/lives/level/best-score tracking implemented in `js/anomaly/state.js`; logic test passes (`anomaly.logic.test: ok`).
+3. Create User Interface for Anomaly Detection Game
+   - Verdict: PASS
+   - Evidence: `index.html` includes HUD score fields plus baseline/selection/deviation dataset panels and round feed; `js/anomaly/ui.js` binds and updates these fields; `css/styles.css` includes responsive layout (`@media (max-width: 680px)`).
+4. Update `STATUS.md` with Anomaly Detection Game Progress
+   - Verdict: PASS
+   - Evidence: Existing Task 102/103/104/105 sections document structure, logic, UI, verification, and current game status notes.
+
+### Overall Workflow Verdict
+- PASS
+- Rationale: The branch contains a browser-based anomaly detection game with dataset-driven outlier detection, interactive UI, and persistent score tracking; implementation is supported by code inspection and passing logic tests.
