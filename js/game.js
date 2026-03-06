@@ -29,9 +29,10 @@ function createUIBindings() {
     startButton: queryRequiredElement("startButton"),
     scoreValue: queryRequiredElement("scoreValue"),
     bestScoreValue: queryRequiredElement("bestScoreValue"),
-    livesValue: queryRequiredElement("livesValue"),
-    levelValue: queryRequiredElement("levelValue"),
+    clicksValue: queryRequiredElement("clicksValue"),
+    comboValue: queryRequiredElement("comboValue"),
     timeValue: queryRequiredElement("timeValue"),
+    timerProgressValue: queryRequiredElement("timerProgressValue"),
     statusValue: queryRequiredElement("statusValue"),
     eventFeedValue: queryRequiredElement("eventFeedValue"),
     selectedCellLabel: queryRequiredElement("selectedCellLabel"),
@@ -101,12 +102,16 @@ function updateReadoutCards(ui, snapshot, clickResult = null) {
 
 function updateHUD(ui, state, clickResult = null) {
   const snapshot = getClickerSnapshot(state);
+  const timeRatio = state.config.roundDurationMs > 0
+    ? Math.max(0, Math.min(1, snapshot.remainingMs / state.config.roundDurationMs))
+    : 0;
 
   ui.scoreValue.textContent = String(snapshot.score);
   ui.bestScoreValue.textContent = String(snapshot.bestScore);
-  ui.livesValue.textContent = String(snapshot.totalClicks);
-  ui.levelValue.textContent = String(snapshot.highestCombo);
+  ui.clicksValue.textContent = String(snapshot.totalClicks);
+  ui.comboValue.textContent = String(snapshot.highestCombo);
   ui.timeValue.textContent = formatCountdown(snapshot.remainingMs);
+  ui.timerProgressValue.style.width = `${timeRatio * 100}%`;
   ui.statusValue.textContent = state.status;
 
   if (state.status === CLICKER_STATUS.READY) {

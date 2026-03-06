@@ -1,30 +1,34 @@
 # TASK REPORT
 
 ## Task
-- TASK_ID: 109
-- RUN_ID: 188
-- Title: Implement Countdown Timer
+- TASK_ID: 110
+- RUN_ID: 189
+- Title: Design Clicker Game UI
 
 ## Summary
-Implemented countdown timer improvements for the clicker game by adding explicit countdown behavior tests and stabilizing runtime end-of-round handling when time reaches zero.
+Implemented a clicker-focused UI refresh that makes score and timer the primary HUD elements, adds a visual timer progress bar, and keeps supporting metrics (clicks, combo, status) in a cleaner secondary row.
 
 ## Files Changed
+- `index.html`
+- `css/styles.css`
 - `js/game.js`
-- `tests/clicker.logic.test.mjs`
 - `STATUS.md`
 - `TASK_REPORT.md`
 
 ## Implementation Details
-- Enhanced timer display in `js/game.js`:
-  - Replaced basic second formatting with `formatCountdown`.
-  - Shows `mm:ss` for minute-plus durations and second+tenths for short countdown visibility.
-- Hardened round completion behavior in `js/game.js`:
-  - Added a one-shot overlay guard to avoid repeated completion handling after timeout.
-  - Ensured timeout transitions remain driven by the clicker state's `remainingMs` reaching `0`.
-- Extended logic tests in `tests/clicker.logic.test.mjs`:
-  - Added coverage to assert countdown decrements correctly over ticks.
-  - Added coverage to assert auto-end when timer reaches zero.
-  - Added coverage to assert paused rounds do not consume countdown time.
+- Reworked clicker HUD structure in `index.html`:
+  - Added a dedicated primary HUD row for `Score` and `Timer`.
+  - Added timer progress fill element (`timerProgressValue`) for at-a-glance remaining time.
+  - Moved click count, top combo, and game status into a compact secondary HUD row.
+- Updated HUD styling in `css/styles.css`:
+  - Added primary/secondary HUD grid layouts.
+  - Added emphasis typography for score and timer values.
+  - Added timer track/fill visuals with smooth width transitions.
+  - Improved mobile behavior by collapsing HUD rows to single-column cards.
+- Updated runtime UI bindings/rendering in `js/game.js`:
+  - Switched bindings to new IDs (`clicksValue`, `comboValue`, `timerProgressValue`).
+  - Added timer progress computation from `remainingMs / roundDurationMs`.
+  - Continued rendering score and formatted countdown in real time.
 
 ## Verification
 1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
@@ -35,6 +39,7 @@ Implemented countdown timer improvements for the clicker game by adding explicit
    - `clicker.logic.test: ok`
 
 ## Acceptance Test Mapping
-- Verify that the timer counts down correctly and ends the game when it reaches zero: **met**
-  - Countdown decrement and timeout transition are validated via `testCountdownTicksToZeroAndStopsGame`.
-  - Pause/resume countdown behavior is validated via `testPausePreservesCountdownUntilResume`.
+- Verify that the UI displays the score and timer correctly and is user-friendly: **met**
+  - Score and timer now occupy primary emphasized HUD cards.
+  - Timer readout remains live and is reinforced with a visual progress bar.
+  - Supporting information remains visible but de-emphasized for clarity.

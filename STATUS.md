@@ -436,3 +436,43 @@ Implemented countdown timer hardening for the clicker game, including explicit t
 - Verify that the timer counts down correctly and ends the game when it reaches zero:
   - PASS: Countdown decrement and timeout transition are directly validated in `tests/clicker.logic.test.mjs` (`testCountdownTicksToZeroAndStopsGame`).
   - PASS: Runtime loop now performs one-shot round completion handling when timer expiry sets game state to `OVER`.
+
+## Task 110 Update (RUN_ID 189)
+Designed and implemented a clearer clicker game UI with emphasis on score and timer readability.
+
+### UI Changes
+- Reworked the HUD in `index.html` into two rows:
+  - Primary row: prominent `Score` and `Timer` cards.
+  - Secondary row: `Clicks`, `Top Combo`, and status.
+- Added timer progress indicator markup:
+  - `timerProgressValue` fill element inside a dedicated timer track.
+- Updated labels and defaults so the interface reads as clicker-specific and easier to scan.
+
+### Styling Changes
+- Updated `css/styles.css` to support the new HUD composition:
+  - Added `hud-primary`/`hud-secondary` grid layouts.
+  - Added emphasis typography for score/timer values.
+  - Added timer bar styling with smooth fill-width transitions.
+  - Added mobile behavior that stacks primary and secondary HUD cards cleanly.
+
+### Runtime Wiring
+- Updated `js/game.js` UI bindings to new IDs:
+  - `clicksValue`, `comboValue`, `timerProgressValue`.
+- Extended HUD rendering to compute and paint timer progress from:
+  - `remainingMs / roundDurationMs`.
+- Preserved existing score/timer/status updates and game-loop behavior.
+
+### Verification (Task 110)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+
+### Acceptance Mapping
+- Verify that the UI displays the score and timer correctly and is user-friendly:
+  - PASS: Score and timer now occupy primary high-contrast HUD cards with larger typography.
+  - PASS: Timer remains text-based and is reinforced by a live visual progress bar.
+  - PASS: Secondary gameplay stats remain visible without competing with core score/timer focus.
