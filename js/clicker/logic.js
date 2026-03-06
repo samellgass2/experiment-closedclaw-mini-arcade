@@ -1,3 +1,5 @@
+import { readScore, resolveStorage, writeScore } from "../storage/score.js";
+
 export const CLICKER_STATUS = {
   READY: "READY",
   RUNNING: "RUNNING",
@@ -22,24 +24,6 @@ function sanitizeNumber(value, fallback, min = Number.NEGATIVE_INFINITY) {
   return Math.max(min, value);
 }
 
-function readBestScore(storage, key) {
-  if (!storage || typeof storage.getItem !== "function") {
-    return 0;
-  }
-
-  const raw = storage.getItem(key);
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-}
-
-function writeBestScore(storage, key, value) {
-  if (!storage || typeof storage.setItem !== "function") {
-    return;
-  }
-
-  storage.setItem(key, String(Math.max(0, Math.floor(value))));
-}
-
 export function createClickerConfig(overrides = {}) {
   return {
     ...CLICKER_DEFAULTS,
@@ -53,14 +37,14 @@ export function createClickerConfig(overrides = {}) {
 
 export function createClickerState(configOverrides = {}, runtime = {}) {
   const config = createClickerConfig(configOverrides);
-  const storage = runtime.storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+  const storage = resolveStorage(runtime.storage);
 
   return {
     config,
     storage,
     status: CLICKER_STATUS.READY,
     score: 0,
-    bestScore: readBestScore(storage, config.bestScoreStorageKey),
+    bestScore: readScore(storage, config.bestScoreStorageKey, 0),
     totalClicks: 0,
     comboStreak: 0,
     highestCombo: 0,
@@ -113,7 +97,7 @@ function toOverState(state, endedAtMs, reason) {
 
   if (state.score > state.bestScore) {
     state.bestScore = state.score;
-    writeBestScore(state.storage, state.config.bestScoreStorageKey, state.bestScore);
+    writeScore(state.storage, state.config.bestScoreStorageKey, state.bestScore);
   }
 }
 

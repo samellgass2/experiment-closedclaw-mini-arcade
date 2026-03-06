@@ -83,6 +83,32 @@ function testTrackProgressAndLapCompletion() {
   assert.equal(storage.map.has(state.config.bestLapStorageKey), true);
 }
 
+function testBestLapLoadsFromStorageOnNewSession() {
+  const storage = createMemoryStorage();
+  const config = {
+    lapTarget: 1,
+    minLapMs: 900,
+    bestLapStorageKey: "racing-session-best-lap"
+  };
+
+  const first = createRacingState(config, { storage });
+  startRace(first, 0);
+  setInputState(first, { throttle: true });
+
+  for (let step = 1; step <= 260 && first.status !== RACING_STATUS.OVER; step += 1) {
+    tickRace(first, step * 32);
+  }
+
+  assert.equal(first.bestLapMs > 0, true, "first session should write best lap");
+
+  const second = createRacingState(config, { storage });
+  assert.equal(
+    second.bestLapMs,
+    first.bestLapMs,
+    "new racing session should restore best lap from persistence storage"
+  );
+}
+
 function testSteeringMovesLaneOffset() {
   const state = createRacingState();
 
@@ -146,6 +172,7 @@ function run() {
   testInitialState();
   testStartTickAndPauseResume();
   testTrackProgressAndLapCompletion();
+  testBestLapLoadsFromStorageOnNewSession();
   testSteeringMovesLaneOffset();
   testLapTimeTrackingUpdatesInRealTime();
   testFinishAndSnapshot();

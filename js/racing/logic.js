@@ -1,3 +1,5 @@
+import { readScore, resolveStorage, writeScore } from "../storage/score.js";
+
 export const RACING_STATUS = {
   READY: "READY",
   RUNNING: "RUNNING",
@@ -55,21 +57,13 @@ function crossedAngleForward(previousAngle, currentAngle, targetAngle) {
 }
 
 function readBestLapMs(storage, key) {
-  if (!storage || typeof storage.getItem !== "function") {
-    return null;
-  }
-
-  const raw = storage.getItem(key);
-  const parsed = Number.parseFloat(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  const storedValue = readScore(storage, key, 0);
+  return storedValue > 0 ? storedValue : null;
 }
 
 function writeBestLapMs(storage, key, lapMs) {
-  if (!storage || typeof storage.setItem !== "function") {
-    return;
-  }
-
-  storage.setItem(key, String(Math.round(Math.max(0, lapMs))));
+  const normalizedLap = Math.round(Math.max(0, lapMs));
+  writeScore(storage, key, normalizedLap);
 }
 
 export function createRacingConfig(overrides = {}) {
@@ -165,7 +159,7 @@ function updateCarPoseFromTrack(track, car) {
 
 export function createRacingState(configOverrides = {}, runtime = {}) {
   const config = createRacingConfig(configOverrides);
-  const storage = runtime.storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+  const storage = resolveStorage(runtime.storage);
   const track = createDefaultTrack(config.canvasWidth, config.canvasHeight);
   const bestLapMs = readBestLapMs(storage, config.bestLapStorageKey);
 

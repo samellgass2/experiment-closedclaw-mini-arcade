@@ -12,8 +12,8 @@ import { createGridLayout } from "../js/anomaly/components/grid.js";
 import { generateRoundGrid } from "../js/anomaly/components/anomalyGenerator.js";
 import { evaluateSelectedCell } from "../js/anomaly/components/anomalyEvaluator.js";
 
-globalThis.window = {
-  localStorage: {
+function createMemoryStorage() {
+  return {
     store: new Map(),
     getItem(key) {
       return this.store.has(key) ? this.store.get(key) : null;
@@ -21,8 +21,8 @@ globalThis.window = {
     setItem(key, value) {
       this.store.set(key, String(value));
     }
-  }
-};
+  };
+}
 
 function testStateScoringAndLifeTracking() {
   const state = createGameState();
@@ -50,6 +50,23 @@ function testStateScoringAndLifeTracking() {
   assert.equal(state.lives, BASE_CONFIG.startingLives - 2);
   assert.equal(state.debug.timeoutCount, 1);
   assert.equal(state.remainingSeconds, BASE_CONFIG.roundDurationSeconds);
+}
+
+function testBestScorePersistsAcrossSessions() {
+  const storage = createMemoryStorage();
+  const first = createGameState({ storage });
+  resetRunState(first);
+
+  applyCorrectSelection(first);
+  applyCorrectSelection(first);
+  assert.equal(first.bestScore, BASE_CONFIG.scorePerCorrect * 2);
+
+  const second = createGameState({ storage });
+  assert.equal(
+    second.bestScore,
+    BASE_CONFIG.scorePerCorrect * 2,
+    "best score should load from persistence storage on a fresh state"
+  );
 }
 
 function testRoundGenerationAndEvaluation() {
@@ -89,6 +106,7 @@ function testRoundGenerationAndEvaluation() {
 
 function run() {
   testStateScoringAndLifeTracking();
+  testBestScorePersistsAcrossSessions();
   testRoundGenerationAndEvaluation();
   console.log("anomaly.logic.test: ok");
 }

@@ -165,12 +165,32 @@ function testPausePreservesCountdownUntilResume() {
   assert.equal(state.remainingMs, 3000, "countdown should continue after resume from new tick baseline");
 }
 
+function testBestScoreLoadsFromStorageOnNewSession() {
+  const storage = createMemoryStorage();
+  const sharedConfig = {
+    roundDurationMs: 5000,
+    autoStartOnClick: false,
+    bestScoreStorageKey: "clicker-session-best"
+  };
+
+  const first = createClickerState(sharedConfig, { storage });
+  startClickerGame(first, 0);
+  registerClick(first, 10);
+  registerClick(first, 20);
+  registerClick(first, 30);
+  finishClickerGame(first, 100, "manual-stop");
+
+  const second = createClickerState(sharedConfig, { storage });
+  assert.equal(second.bestScore, first.bestScore, "best score should be restored from storage");
+}
+
 function run() {
   testAutoStartAndScoreTracking();
   testPauseResumeAndRejectedClicks();
   testResetAndSnapshot();
   testCountdownTicksToZeroAndStopsGame();
   testPausePreservesCountdownUntilResume();
+  testBestScoreLoadsFromStorageOnNewSession();
   console.log("clicker.logic.test: ok");
 }
 
