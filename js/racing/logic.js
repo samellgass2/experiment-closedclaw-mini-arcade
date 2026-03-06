@@ -180,6 +180,7 @@ export function createRacingState(configOverrides = {}, runtime = {}) {
     elapsedMs: 0,
     completedLaps: 0,
     currentLapMs: 0,
+    lastLapMs: null,
     bestLapMs,
     lapTimesMs: [],
     finishReason: null,
@@ -220,6 +221,7 @@ export function resetRacingState(state) {
   state.elapsedMs = 0;
   state.completedLaps = 0;
   state.currentLapMs = 0;
+  state.lastLapMs = null;
   state.lapTimesMs = [];
   state.finishReason = null;
   state.eventMessage = "Press Start Race to begin.";
@@ -363,15 +365,18 @@ function updateLapProgress(state, previousAngle) {
     return;
   }
 
-  state.completedLaps += 1;
-  state.lapTimesMs.push(state.currentLapMs);
+  const finishedLapMs = state.currentLapMs;
 
-  if (!state.bestLapMs || state.currentLapMs < state.bestLapMs) {
-    state.bestLapMs = state.currentLapMs;
+  state.completedLaps += 1;
+  state.lastLapMs = finishedLapMs;
+  state.lapTimesMs.push(finishedLapMs);
+
+  if (!state.bestLapMs || finishedLapMs < state.bestLapMs) {
+    state.bestLapMs = finishedLapMs;
     writeBestLapMs(state.storage, state.config.bestLapStorageKey, state.bestLapMs);
   }
 
-  state.eventMessage = `Lap ${state.completedLaps} completed in ${(state.currentLapMs / 1000).toFixed(2)}s.`;
+  state.eventMessage = `Lap ${state.completedLaps} completed in ${(finishedLapMs / 1000).toFixed(2)}s.`;
   state.currentLapMs = 0;
 
   if (state.completedLaps >= state.config.lapTarget) {
@@ -404,6 +409,7 @@ export function getRacingSnapshot(state) {
     status: state.status,
     elapsedMs: state.elapsedMs,
     currentLapMs: state.currentLapMs,
+    lastLapMs: state.lastLapMs,
     completedLaps: state.completedLaps,
     lapTarget: state.config.lapTarget,
     bestLapMs: state.bestLapMs,

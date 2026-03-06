@@ -36,10 +36,12 @@ function createUIBindings() {
     lapValue: queryRequiredElement("lapValue"),
     timerValue: queryRequiredElement("timerValue"),
     currentLapValue: queryRequiredElement("currentLapValue"),
+    lastLapValue: queryRequiredElement("lastLapValue"),
     bestLapValue: queryRequiredElement("bestLapValue"),
     speedValue: queryRequiredElement("speedValue"),
     trackStateValue: queryRequiredElement("trackStateValue"),
-    eventValue: queryRequiredElement("eventValue")
+    eventValue: queryRequiredElement("eventValue"),
+    lapHistoryValue: queryRequiredElement("lapHistoryValue")
   };
 }
 

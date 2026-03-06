@@ -32,6 +32,10 @@
           <strong id="currentLapValue" class="hud-value">0.00s</strong>
         </article>
         <article class="hud-item">
+          <span class="hud-label">Last Lap</span>
+          <strong id="lastLapValue" class="hud-value">--</strong>
+        </article>
+        <article class="hud-item">
           <span class="hud-label">Best Lap</span>
           <strong id="bestLapValue" class="hud-value">--</strong>
         </article>
@@ -64,6 +68,13 @@
       <section class="event-feed" aria-live="polite" aria-label="Race event updates">
         <h2 class="event-title">Race Feed</h2>
         <p id="eventValue" class="event-message">Press Start Race to begin.</p>
+      </section>
+
+      <section class="lap-history" aria-live="polite" aria-label="Completed lap times">
+        <h2 class="event-title">Lap Times</h2>
+        <ol id="lapHistoryValue" class="lap-history-list">
+          <li class="lap-history-empty">No completed laps yet.</li>
+        </ol>
       </section>
 
       <footer class="race-footer">

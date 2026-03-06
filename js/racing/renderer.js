@@ -4,6 +4,16 @@ function toSeconds(ms) {
   return `${(Math.max(0, ms) / 1000).toFixed(2)}s`;
 }
 
+function buildLapHistoryMarkup(state) {
+  if (state.lapTimesMs.length === 0) {
+    return "<li class=\"lap-history-empty\">No completed laps yet.</li>";
+  }
+
+  return state.lapTimesMs
+    .map((lapMs, index) => `<li><span>Lap ${index + 1}</span><strong>${toSeconds(lapMs)}</strong></li>`)
+    .join("");
+}
+
 function drawBackground(ctx, width, height) {
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, "#95c9f5");
@@ -132,10 +142,12 @@ export function createRacingRenderer(canvas) {
       ui.lapValue.textContent = `${state.completedLaps} / ${state.config.lapTarget}`;
       ui.timerValue.textContent = toSeconds(state.elapsedMs);
       ui.currentLapValue.textContent = toSeconds(state.currentLapMs);
+      ui.lastLapValue.textContent = state.lastLapMs ? toSeconds(state.lastLapMs) : "--";
       ui.bestLapValue.textContent = state.bestLapMs ? toSeconds(state.bestLapMs) : "--";
       ui.speedValue.textContent = `${speedKmh.toFixed(0)} km/h`;
       ui.trackStateValue.textContent = state.car.offTrack ? "OFF TRACK" : "ON TRACK";
       ui.eventValue.textContent = state.eventMessage;
+      ui.lapHistoryValue.innerHTML = buildLapHistoryMarkup(state);
 
       ui.trackStateValue.classList.remove("is-safe", "is-warning");
       ui.trackStateValue.classList.add(state.car.offTrack ? "is-warning" : "is-safe");
