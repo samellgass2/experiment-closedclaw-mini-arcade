@@ -1,13 +1,12 @@
 import { BASE_CONFIG, GAME_STATE, STORAGE_KEY } from "./constants.js";
+import { readScore, resolveStorage, writeScore } from "../storage/score.js";
 
-function loadBestScore() {
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+function loadBestScore(storage) {
+  return readScore(storage, STORAGE_KEY, 0);
 }
 
-function saveBestScore(value) {
-  window.localStorage.setItem(STORAGE_KEY, String(value));
+function saveBestScore(storage, value) {
+  writeScore(storage, STORAGE_KEY, value);
 }
 
 function createRoundSeed(level, score) {
@@ -21,9 +20,11 @@ function createRoundSeed(level, score) {
 }
 
 export function createGameState() {
-  const bestScore = loadBestScore();
+  const storage = resolveStorage();
+  const bestScore = loadBestScore(storage);
 
   return {
+    storage,
     status: GAME_STATE.LOADING,
     score: 0,
     bestScore,
@@ -49,7 +50,7 @@ export function createGameState() {
 export function updateBestScore(state) {
   if (state.score > state.bestScore) {
     state.bestScore = state.score;
-    saveBestScore(state.bestScore);
+    saveBestScore(state.storage, state.bestScore);
   }
 }
 

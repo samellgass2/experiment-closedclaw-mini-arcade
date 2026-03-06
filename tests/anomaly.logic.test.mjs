@@ -52,6 +52,23 @@ function testStateScoringAndLifeTracking() {
   assert.equal(state.remainingSeconds, BASE_CONFIG.roundDurationSeconds);
 }
 
+function testBestScorePersistsAcrossSessions() {
+  window.localStorage.store.clear();
+  const first = createGameState();
+  resetRunState(first);
+
+  applyCorrectSelection(first);
+  applyCorrectSelection(first);
+  assert.equal(first.bestScore, BASE_CONFIG.scorePerCorrect * 2);
+
+  const second = createGameState();
+  assert.equal(
+    second.bestScore,
+    BASE_CONFIG.scorePerCorrect * 2,
+    "best score should load from local storage on a fresh state"
+  );
+}
+
 function testRoundGenerationAndEvaluation() {
   const layout = createGridLayout(
     BASE_CONFIG.rows,
@@ -89,6 +106,7 @@ function testRoundGenerationAndEvaluation() {
 
 function run() {
   testStateScoringAndLifeTracking();
+  testBestScorePersistsAcrossSessions();
   testRoundGenerationAndEvaluation();
   console.log("anomaly.logic.test: ok");
 }

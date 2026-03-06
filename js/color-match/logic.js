@@ -1,3 +1,5 @@
+import { readScore, resolveStorage, writeScore } from "../storage/score.js";
+
 export const COLOR_MATCH_STATUS = {
   READY: "READY",
   RUNNING: "RUNNING",
@@ -66,24 +68,6 @@ function normalizeColorCandidate(candidate, fallback, min, max) {
 
 function copyColor(color) {
   return { red: color.red, green: color.green, blue: color.blue };
-}
-
-function readBestScore(storage, key) {
-  if (!storage || typeof storage.getItem !== "function") {
-    return 0;
-  }
-
-  const rawValue = storage.getItem(key);
-  const parsed = Number.parseInt(rawValue, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-}
-
-function writeBestScore(storage, key, score) {
-  if (!storage || typeof storage.setItem !== "function") {
-    return;
-  }
-
-  storage.setItem(key, String(Math.max(0, Math.floor(score))));
 }
 
 function randomChannelValue(randomFn, min, max) {
@@ -206,7 +190,7 @@ function finalizeBestScore(state) {
   }
 
   state.bestScore = state.score;
-  writeBestScore(state.storage, state.config.bestScoreStorageKey, state.bestScore);
+  writeScore(state.storage, state.config.bestScoreStorageKey, state.bestScore);
 }
 
 function calculateSpeedBonus(durationMs, config) {
@@ -291,7 +275,7 @@ function createRoundFeedback(summary) {
 
 export function createColorMatchState(configOverrides = {}, runtime = {}) {
   const config = createColorMatchConfig(configOverrides);
-  const storage = runtime.storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+  const storage = resolveStorage(runtime.storage);
 
   return {
     config,
@@ -299,7 +283,7 @@ export function createColorMatchState(configOverrides = {}, runtime = {}) {
     random: typeof runtime.random === "function" ? runtime.random : Math.random,
     status: COLOR_MATCH_STATUS.READY,
     score: 0,
-    bestScore: readBestScore(storage, config.bestScoreStorageKey),
+    bestScore: readScore(storage, config.bestScoreStorageKey, 0),
     roundsPlayed: 0,
     currentRound: null,
     roundHistory: [],

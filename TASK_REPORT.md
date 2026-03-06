@@ -1,33 +1,30 @@
-# Task Report: TASK_ID 126 (RUN_ID 206)
+# Task Report: TASK_ID 131 (RUN_ID 214)
 
 ## Summary
-Implemented lap count and lap time tracking improvements for the Top-Down Racing game, including live HUD updates and a lap-by-lap timing panel during gameplay.
+Implemented a shared local-storage persistence layer for scores and integrated it across score-based games so best scores are safely saved and restored across sessions.
 
 ## Changes
-- Updated race state in `js/racing/logic.js`:
-  - Added `lastLapMs` to track the most recently completed lap time.
-  - Reset `lastLapMs` on race reset/start.
-  - Refactored lap completion logic to use `finishedLapMs` consistently when recording lap data and best lap.
-  - Exposed `lastLapMs` via `getRacingSnapshot`.
-- Updated HUD rendering in `js/racing/renderer.js`:
-  - Added live `Last Lap` field updates.
-  - Added lap history rendering to show each completed lap time in order.
-- Wired new UI bindings in `js/game.js`:
-  - Bound `lastLapValue` and `lapHistoryValue` DOM nodes.
-- Extended UI structure in `index.html`:
-  - Added `Last Lap` metric card in HUD.
-  - Added `Lap Times` section with an ordered list for completed laps.
-- Styled lap timing display in `css/styles.css`:
-  - Adjusted HUD grid for an additional metric.
-  - Added styles for the lap history card and list.
-- Expanded racing tests in `tests/racing.logic.test.mjs`:
-  - Added assertions for real-time timer progression while running.
-  - Added assertions for completed lap capture into `lapTimesMs` and `lastLapMs`.
-  - Added snapshot assertion for `lastLapMs` default value.
+- Added `js/storage/score.js` with reusable helpers:
+  - `resolveStorage(storageOverride)`
+  - `readScore(storage, key, fallback)`
+  - `writeScore(storage, key, value)`
+  - Includes input normalization and failure-safe behavior for unavailable/throwing storage APIs.
+- Refactored score persistence in game logic modules:
+  - `js/anomaly/state.js`
+  - `js/clicker/logic.js`
+  - `js/color-match/logic.js`
+  - Replaced duplicated ad-hoc read/write logic with the shared storage helper.
+- Expanded tests to validate save + retrieval persistence behavior across sessions:
+  - `tests/anomaly.logic.test.mjs`
+  - `tests/clicker.logic.test.mjs`
+  - `tests/color-match.logic.test.mjs`
+- Added dedicated storage utility tests:
+  - `tests/storage.score.test.mjs`
+  - Covers round-trip write/read, invalid stored values, write failures, and storage resolution behavior.
 
 ## Verification
 Executed:
-`for test_file in tests/*.mjs; do node "$test_file"; done`
+`for f in tests/*.mjs; do node "$f"; done`
 
 Result:
 - anomaly.logic.test: ok
@@ -35,8 +32,9 @@ Result:
 - color-match.logic.test: ok
 - racing.controls.test: ok
 - racing.logic.test: ok
+- storage.score.test: ok
 
 ## Acceptance Coverage
-- Lap count remains visible and updates as laps complete.
-- Lap timing updates in real time during active gameplay (`currentLapMs` + HUD field updates each frame).
-- Time taken for each completed lap is now displayed in the `Lap Times` panel and persisted in race state (`lapTimesMs` / `lastLapMs`).
+- Scores are persisted in local storage via shared write helper.
+- Persisted scores are retrieved on fresh state creation (simulated new sessions in tests).
+- Persistence path is resilient to invalid/missing data and storage API failures.

@@ -196,12 +196,31 @@ function testSnapshotShape() {
   assert.equal(overSnapshot.currentRound, null);
 }
 
+function testBestScoreLoadsFromStorageOnNewSession() {
+  const storage = createMemoryStorage();
+  const config = {
+    roundsPerGame: 1,
+    bestScoreStorageKey: "color-match-session-best"
+  };
+
+  const first = createColorMatchState(config, { storage });
+  startColorMatchGame(first, {
+    nowMs: 1000,
+    targetColor: { red: 128, green: 128, blue: 128 }
+  });
+  submitRound(first, 1100);
+
+  const second = createColorMatchState(config, { storage });
+  assert.equal(second.bestScore, first.score, "best score should be restored on next session");
+}
+
 function run() {
   testInputTrackingAndClamping();
   testScoreAccuracyOrdering();
   testRoundSubmissionProgressionAndBestScore();
   testRejectionWhenRoundNotRunning();
   testSnapshotShape();
+  testBestScoreLoadsFromStorageOnNewSession();
   console.log("color-match.logic.test: ok");
 }
 
