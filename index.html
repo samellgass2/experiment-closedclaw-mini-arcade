@@ -3,88 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini Arcade - Top-Down Racing</title>
+  <title>Mini Arcade Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <main class="page-shell">
-    <section class="race-card" aria-label="Top-down racing game area">
-      <header class="race-header">
-        <h1 class="race-title">Top-Down Racing</h1>
-        <p class="race-subtitle">Complete 3 laps, stay on track, and beat your best lap time.</p>
-      </header>
-
-      <section class="hud" aria-live="polite" aria-label="Race status and metrics">
-        <article class="hud-item">
-          <span class="hud-label">Status</span>
-          <strong id="statusValue" class="hud-value">READY</strong>
-        </article>
-        <article class="hud-item">
-          <span class="hud-label">Laps</span>
-          <strong id="lapValue" class="hud-value">0 / 3</strong>
-        </article>
-        <article class="hud-item">
-          <span class="hud-label">Race Time</span>
-          <strong id="timerValue" class="hud-value">0.00s</strong>
-        </article>
-        <article class="hud-item">
-          <span class="hud-label">Current Lap</span>
-          <strong id="currentLapValue" class="hud-value">0.00s</strong>
-        </article>
-        <article class="hud-item">
-          <span class="hud-label">Last Lap</span>
-          <strong id="lastLapValue" class="hud-value">--</strong>
-        </article>
-        <article class="hud-item">
-          <span class="hud-label">Best Lap</span>
-          <strong id="bestLapValue" class="hud-value">--</strong>
-        </article>
-        <article class="hud-item">
-          <span class="hud-label">Speed</span>
-          <strong id="speedValue" class="hud-value">0 km/h</strong>
-        </article>
-        <article class="hud-item">
-          <span class="hud-label">Track State</span>
-          <strong id="trackStateValue" class="hud-value is-safe">ON TRACK</strong>
-        </article>
-      </section>
-
-      <section class="canvas-wrap" aria-label="Racing game canvas">
-        <canvas
-          id="raceCanvas"
-          width="960"
-          height="600"
-          role="img"
-          aria-label="Top-down race track with player car"
-        ></canvas>
-      </section>
-
-      <section class="controls" aria-label="Game controls">
-        <button id="startRaceButton" class="action-button" type="button">Start Race</button>
-        <button id="pauseRaceButton" class="action-button action-button-secondary" type="button">Pause / Resume</button>
-        <button id="resetRaceButton" class="action-button action-button-ghost" type="button">Reset</button>
-      </section>
-
-      <section class="event-feed" aria-live="polite" aria-label="Race event updates">
-        <h2 class="event-title">Race Feed</h2>
-        <p id="eventValue" class="event-message">Press Start Race to begin.</p>
-      </section>
-
-      <section class="lap-history" aria-live="polite" aria-label="Completed lap times">
-        <h2 class="event-title">Lap Times</h2>
-        <ol id="lapHistoryValue" class="lap-history-list">
-          <li class="lap-history-empty">No completed laps yet.</li>
-        </ol>
-      </section>
-
-      <footer class="race-footer">
-        <ul class="controls-list">
-          <li><kbd>Space</kbd> Start race / pause / resume</li>
-          <li><kbd>W</kbd> or <kbd>↑</kbd> Throttle</li>
-          <li><kbd>S</kbd> or <kbd>↓</kbd> Brake / reverse</li>
-          <li><kbd>A</kbd> / <kbd>D</kbd> or <kbd>←</kbd> / <kbd>→</kbd> Steer</li>
-        </ul>
-      </footer>
+    <section class="dashboard-card" aria-label="Mini arcade dashboard">
+      <div id="dashboardApp"></div>
     </section>
   </main>
 

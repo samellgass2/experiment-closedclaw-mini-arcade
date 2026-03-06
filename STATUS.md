@@ -1096,3 +1096,40 @@ Goal: Implement a persistence layer that stores user scores/game statistics acro
 - Automated tests confirm persistence behavior and session-to-session retrieval.
 
 Conclusion: Workflow goal is met.
+
+## Task 141 Update (RUN_ID 226)
+Implemented a new dashboard component as the main interface for composing game tiles, including add, remove, and rearrange interactions.
+
+### Dashboard Implementation
+- Added dashboard domain logic in `js/dashboard/logic.js`:
+  - Catalog normalization and state creation (`createDashboardState`)
+  - Tile operations for add/remove/rearrange (`addDashboardTile`, `removeDashboardTile`, `rearrangeDashboardTiles`, `moveDashboardTile`)
+  - Snapshot and availability helpers for rendering (`getDashboardSnapshot`, `getDashboardAvailableGames`)
+- Added dashboard UI component in `js/dashboard/component.js`:
+  - Renders dashboard shell, add controls, status messaging, and tile list
+  - Supports tile management with buttons (`Add Tile`, `Move Left`, `Move Right`, `Remove`)
+  - Supports drag-and-drop tile reordering
+  - Exposes snapshot access via `getSnapshot`
+- Added dashboard module index in `js/dashboard/index.js`.
+
+### App Integration
+- Replaced main page layout with dashboard root container in `index.html`.
+- Updated main entrypoint `js/game.js` to initialize dashboard as the default app view.
+- Replaced stylesheet content in `css/styles.css` with dashboard-focused UI styling for desktop/mobile.
+
+### Verification (Task 141)
+1. `node --test tests/*.mjs`
+   - Result: PASS
+   - Output includes:
+     - `dashboard.logic.test: ok`
+     - all existing suites passing (anomaly, clicker, color-match, racing, storage)
+2. `node --check js/game.js && node --check js/dashboard/logic.js && node --check js/dashboard/component.js`
+   - Result: PASS
+
+### Acceptance Mapping (Task 141)
+1. Users can add game tiles on the dashboard:
+   - PASS: add control + `addDashboardTile` workflow implemented and tested.
+2. Users can remove game tiles on the dashboard:
+   - PASS: per-tile remove control + `removeDashboardTile` workflow implemented and tested.
+3. Users can rearrange game tiles on the dashboard:
+   - PASS: left/right move controls and drag-drop reorder + `rearrangeDashboardTiles` workflow implemented and tested.
