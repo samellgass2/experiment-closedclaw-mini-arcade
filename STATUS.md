@@ -2,7 +2,7 @@
 
 ## Project
 - Name: `experiment-mini-arcade`
-- Workflow: `Implement Clicker Game`
+- Workflow: `Implement Color Matching Game`
 - Snapshot Date (UTC): `2026-03-06`
 
 ## Task 102 Update (RUN_ID 181)
@@ -596,3 +596,169 @@ Updated project status documentation to reflect the current clicker game impleme
 ### Overall Workflow Verdict
 - PASS
 - Rationale: The branch implements a playable time-limited clicker game where rapid input increases score, a countdown timer governs round duration, and game state cleanly ends at timeout with UI feedback.
+
+## Task 114 Update (RUN_ID 193)
+Implemented standalone color matching game logic with per-channel input tracking and accuracy-based scoring.
+
+### Logic Implemented
+- Added color matching domain module:
+  - `js/color-match/logic.js`
+  - Includes game/round state model, lifecycle controls, RGB adjustment handling, distance/accuracy calculation, and score computation.
+- Added exports for consistency with existing module layout:
+  - `js/color-match/index.js`
+  - `js/color-match.js`
+- Added acceptance-focused tests:
+  - `tests/color-match.logic.test.mjs`
+  - Verifies user input tracking (including clamping and channel counters), score ordering by color accuracy, round progression, and best-score persistence.
+
+### Verification (Task 114)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs && node tests/color-match.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+     - `color-match.logic.test: ok`
+
+## Task 115 Update (RUN_ID 194)
+Implemented full color matching game UI and integrated it with existing color-match game logic.
+
+### UI Implemented
+- Replaced clicker-focused page shell with color-match interface in `index.html`:
+  - Added target and guess color swatches with live RGB labels.
+  - Added per-channel controls for red/green/blue (range slider, numeric input, +/-5 buttons).
+  - Added round actions (`Submit Guess`, `Next Round`, `Restart Game`).
+  - Added score/round/status HUD and round feedback/readout cards.
+  - Preserved overlay-driven start and post-round/game transitions.
+- Reworked styles in `css/styles.css` for the new layout:
+  - Added swatch panel, channel control rows, action row, and responsive mobile layout.
+  - Added status and verdict visual states for ready/running/round-complete/over UX.
+- Replaced runtime controller in `js/game.js`:
+  - Wired UI to `js/color-match/logic.js` (`startColorMatchGame`, `startNextRound`, `setChannelValue`, `adjustChannelValue`, `submitRound`).
+  - Added live synchronization of slider/number inputs and guess swatch rendering.
+  - Added keyboard support (`Enter`, `R/F`, `G/H`, `B/N`) for quick interaction.
+  - Added dynamic control enable/disable logic by game state.
+
+### Acceptance Coverage
+- UI displays the target color and current guess color in dedicated swatches.
+- Users can adjust RGB channels through multiple input controls.
+- Submit/next/restart interactions update score, round progress, and feedback.
+- Layout adapts for smaller screens through responsive breakpoints.
+
+### Verification (Task 115)
+1. `node --check js/game.js`
+   - Result: PASS
+2. `node tests/color-match.logic.test.mjs`
+   - Result: PASS (`color-match.logic.test: ok`)
+3. `node tests/clicker.logic.test.mjs`
+   - Result: PASS (`clicker.logic.test: ok`)
+4. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS (`anomaly.logic.test: ok`)
+
+## Task 117 Update (RUN_ID 196)
+Updated project status documentation to reflect the current state of the Color Matching Game implementation.
+
+### Current Color Matching Game State
+- Gameplay lifecycle is active in `js/color-match/logic.js` and `js/game.js`:
+  - `READY` -> `RUNNING` -> `ROUND_COMPLETE` -> `RUNNING` -> `OVER`
+  - Game completion occurs after configured round count (`roundsPerGame`, default `5`).
+- Round interaction and input tracking are implemented:
+  - RGB controls support slider, numeric input, and +/- step adjustments per channel.
+  - Inputs are clamped to `0..255`.
+  - Per-round and total adjustment counters are tracked, including per-channel counts.
+- Scoring and feedback model is implemented:
+  - Score combines base accuracy with exact/near bonuses and performance modifiers.
+  - Performance modifiers include fast-round bonus, zero-adjustment bonus, and excessive-adjustment penalty.
+  - Round feedback includes headline/detail/tags and score breakdown payload.
+  - Performance summary tracks average accuracy and near-match streak metrics across rounds.
+- UI integration is implemented in `index.html`, `css/styles.css`, and `js/game.js`:
+  - Target/guess swatches and live RGB labels are rendered.
+  - HUD displays score, best score, round progress, adjustments, average accuracy, streak, and status.
+  - Overlay flow covers start, post-round continuation, and game completion.
+  - Event feed and round result cards update after each submission.
+- Persistence:
+  - Best score is loaded/saved via `localStorage` using configured storage key.
+
+### Verification (Task 117)
+1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
+   - Result: PASS
+2. `node tests/color-match.logic.test.mjs`
+   - Result: PASS (`color-match.logic.test: ok`)
+3. `node tests/clicker.logic.test.mjs`
+   - Result: PASS (`clicker.logic.test: ok`)
+4. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS (`anomaly.logic.test: ok`)
+
+### Acceptance Mapping
+- Verify that `STATUS.md` reflects the current state of color matching game development accurately:
+  - PASS: This section documents the active color-match lifecycle, scoring/feedback behavior, UI wiring, persistence, and validation commands/results.
+
+## QA Validation Summary (Workflow #13)
+- QA Date (UTC): `2026-03-06`
+- Branch: `workflow/13/dev`
+- Scope: Validate workflow goal "Implement Color Matching Game" without adding implementation code changes.
+
+### Commits Reviewed (`main..HEAD`)
+- `483b2f7` task/117: update color match progress in status
+- `81b2a50` task/116: implement color match scoring and feedback system
+- `d3b16f6` task/115: build color matching game interface
+- `a8929c5` task/114: update task report for color matching logic
+- `cb24d93` task/114: implement color matching game logic and tests
+
+### Commands Run and Results
+1. `git log --oneline main..HEAD`
+   - Result: PASS
+   - Output:
+     - `483b2f7 task/117: update color match progress in status`
+     - `81b2a50 task/116: implement color match scoring and feedback system`
+     - `d3b16f6 task/115: build color matching game interface`
+     - `a8929c5 task/114: update task report for color matching logic`
+     - `cb24d93 task/114: implement color matching game logic and tests`
+2. `git diff main...HEAD --stat`
+   - Result: PASS
+   - Output:
+     - `STATUS.md                        |  99 +++++-`
+     - `TASK_REPORT.md                   |  46 ++-`
+     - `css/styles.css                   | 248 ++++++++++-----`
+     - `index.html                       | 174 ++++++-----`
+     - `js/color-match.js                |   1 +`
+     - `js/color-match/index.js          |   1 +`
+     - `js/color-match/logic.js          | 645 +++++++++++++++++++++++++++++++++++++++`
+     - `js/game.js                       | 508 +++++++++++++++++++-----------`
+     - `tests/color-match.logic.test.mjs | 208 +++++++++++++`
+     - `9 files changed, 1583 insertions(+), 347 deletions(-)`
+3. `cat package.json | grep -A 40 '"scripts"'`
+   - Result: SKIPPED (no npm manifest present in repository root)
+   - Output:
+     - `cat: package.json: No such file or directory`
+4. `node tests/color-match.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `color-match.logic.test: ok`
+5. `node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `clicker.logic.test: ok`
+6. `node tests/anomaly.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+
+### Per-Task Acceptance Verdict
+1. Create Color Matching Game Logic
+   - Verdict: PASS
+   - Evidence: `js/color-match/logic.js` tracks per-input adjustments and per-channel counts, clamps channel values, computes distance/accuracy, and awards points from accuracy/performance modifiers; `tests/color-match.logic.test.mjs` validates tracking, clamping, scoring order, progression, and persistence.
+2. Develop Color Matching Game UI
+   - Verdict: PASS
+   - Evidence: `index.html` includes target/guess swatches, RGB sliders/number inputs/+/- controls, round actions, and feedback cards; `js/game.js` wires these controls and state transitions; `css/styles.css` includes responsive breakpoints at `760px` and `560px` for mobile interaction.
+3. Implement Scoring System for Color Matching Game
+   - Verdict: PASS
+   - Evidence: `calculateRoundScoreDetails` in `js/color-match/logic.js` applies base points, exact/near bonuses, speed bonus, and adjustment penalty; `submitRound` returns feedback payload and score breakdown; `js/game.js` renders awarded points, accuracy, breakdown, and feedback tags/details.
+4. Update STATUS.md with Color Matching Game Progress
+   - Verdict: PASS
+   - Evidence: Existing Task 117 section documents lifecycle, input tracking, scoring/feedback, UI integration, persistence, and verification; this QA section now records final validation artifacts.
+
+### Overall Workflow Verdict
+- PASS
+- Rationale: The branch delivers a functioning color matching game where users adjust RGB values to match target colors, scores are computed from accuracy and interaction performance, and feedback is shown per round and across game summary UI.

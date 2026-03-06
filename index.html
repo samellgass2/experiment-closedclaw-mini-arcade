@@ -3,133 +3,165 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini Arcade - Clicker Challenge</title>
+  <title>Mini Arcade - Color Match Challenge</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <main class="page-shell">
-    <section class="game-card" aria-label="Clicker Challenge game area">
+    <section class="game-card" aria-label="Color Match Challenge game area">
       <header class="game-header">
-        <h1 class="game-title">Clicker Challenge</h1>
-        <p class="game-subtitle">Click fast to maximize your score before time expires.</p>
+        <h1 class="game-title">Color Match Challenge</h1>
+        <p class="game-subtitle">Match the target color by adjusting red, green, and blue channels.</p>
       </header>
 
-      <section class="hud" aria-live="polite" aria-label="Game score and timer">
+      <section class="hud" aria-live="polite" aria-label="Game score and round status">
         <div class="hud-primary">
           <article class="hud-item hud-item-score">
             <span class="hud-label">Score</span>
             <strong id="scoreValue" class="hud-value hud-value-emphasis">0</strong>
             <span class="hud-meta">Best: <span id="bestScoreValue">0</span></span>
           </article>
-          <article class="hud-item hud-item-time">
-            <span class="hud-label">Timer</span>
-            <strong id="timeValue" class="hud-value hud-value-emphasis">30.0s</strong>
-            <div class="timer-track" role="presentation" aria-hidden="true">
-              <span id="timerProgressValue" class="timer-fill"></span>
-            </div>
+          <article class="hud-item hud-item-round">
+            <span class="hud-label">Round</span>
+            <strong id="roundValue" class="hud-value hud-value-emphasis">0 / 5</strong>
+            <span id="roundMetaValue" class="hud-meta">Rounds remaining: 5</span>
           </article>
         </div>
         <div class="hud-secondary">
           <div class="hud-item hud-item-compact">
-            <span class="hud-label">Clicks</span>
-            <strong id="clicksValue" class="hud-value">0</strong>
+            <span class="hud-label">Adjustments</span>
+            <strong id="adjustmentsValue" class="hud-value">0</strong>
           </div>
           <div class="hud-item hud-item-compact">
-            <span class="hud-label">Top Combo</span>
-            <strong id="comboValue" class="hud-value">0</strong>
+            <span class="hud-label">Avg Accuracy</span>
+            <strong id="averageAccuracyValue" class="hud-value">0.0%</strong>
           </div>
-          <div id="statusValue" class="hud-item hud-status">Ready</div>
+          <div class="hud-item hud-item-compact">
+            <span class="hud-label">Near Streak</span>
+            <strong id="streakValue" class="hud-value">0</strong>
+          </div>
+          <div class="hud-item hud-item-compact">
+            <span class="hud-label">Last Accuracy</span>
+            <strong id="accuracyValue" class="hud-value">--</strong>
+          </div>
+          <div id="statusValue" class="hud-item hud-status">READY</div>
         </div>
       </section>
 
-      <div class="game-stage-wrap">
-        <canvas
-          id="gameCanvas"
-          class="game-canvas"
-          width="640"
-          height="640"
-          role="img"
-          aria-label="Clicker game board"
-        ></canvas>
-
-        <div id="overlay" class="overlay visible">
-          <h2 id="overlayTitle" class="overlay-title">Clicker Challenge</h2>
-          <p id="overlayMessage" class="overlay-message">Click Start to begin. Every click adds to your score.</p>
-          <button id="startButton" class="action-button" type="button">Start Game</button>
-        </div>
-      </div>
-
-      <section class="dataset-panel" aria-live="polite" aria-label="Dataset and selection details">
-        <article class="dataset-card">
-          <h2 class="dataset-title">Current Round</h2>
-          <p class="dataset-description">Round settings and key game constants.</p>
-          <dl class="metric-grid">
-            <div class="metric-row">
-              <dt>Mode</dt>
-              <dd id="baselineTemperatureValue">Clicker</dd>
-            </div>
-            <div class="metric-row">
-              <dt>Scoring</dt>
-              <dd id="baselineLatencyValue">Per click + combo</dd>
-            </div>
-            <div class="metric-row">
-              <dt>Goal</dt>
-              <dd id="baselineErrorRateValue">Highest score</dd>
-            </div>
-          </dl>
+      <section class="swatch-panel" aria-label="Target and guess colors">
+        <article class="swatch-card">
+          <h2 class="dataset-title">Target Color</h2>
+          <p class="dataset-description">Reference color to match this round.</p>
+          <div id="targetSwatch" class="color-swatch" role="img" aria-label="Target color swatch"></div>
+          <p id="targetRgbValue" class="swatch-rgb">RGB(--, --, --)</p>
         </article>
 
+        <article class="swatch-card">
+          <h2 class="dataset-title">Your Guess</h2>
+          <p class="dataset-description">Adjust channels to match as closely as possible.</p>
+          <div id="guessSwatch" class="color-swatch" role="img" aria-label="Current guess color swatch"></div>
+          <p id="guessRgbValue" class="swatch-rgb">RGB(128, 128, 128)</p>
+        </article>
+      </section>
+
+      <section class="controls-panel" aria-label="Color channel controls">
+        <h2 class="controls-title">Color Controls</h2>
+
+        <div class="channel-row" data-channel="red">
+          <label for="redRange" class="channel-label">Red</label>
+          <button id="redDownButton" class="channel-adjust" type="button" aria-label="Decrease red by five">-5</button>
+          <input id="redRange" class="channel-range" type="range" min="0" max="255" step="1" value="128" aria-label="Red channel slider">
+          <button id="redUpButton" class="channel-adjust" type="button" aria-label="Increase red by five">+5</button>
+          <input id="redInput" class="channel-number" type="number" min="0" max="255" step="1" value="128" aria-label="Red channel value">
+        </div>
+
+        <div class="channel-row" data-channel="green">
+          <label for="greenRange" class="channel-label">Green</label>
+          <button id="greenDownButton" class="channel-adjust" type="button" aria-label="Decrease green by five">-5</button>
+          <input id="greenRange" class="channel-range" type="range" min="0" max="255" step="1" value="128" aria-label="Green channel slider">
+          <button id="greenUpButton" class="channel-adjust" type="button" aria-label="Increase green by five">+5</button>
+          <input id="greenInput" class="channel-number" type="number" min="0" max="255" step="1" value="128" aria-label="Green channel value">
+        </div>
+
+        <div class="channel-row" data-channel="blue">
+          <label for="blueRange" class="channel-label">Blue</label>
+          <button id="blueDownButton" class="channel-adjust" type="button" aria-label="Decrease blue by five">-5</button>
+          <input id="blueRange" class="channel-range" type="range" min="0" max="255" step="1" value="128" aria-label="Blue channel slider">
+          <button id="blueUpButton" class="channel-adjust" type="button" aria-label="Increase blue by five">+5</button>
+          <input id="blueInput" class="channel-number" type="number" min="0" max="255" step="1" value="128" aria-label="Blue channel value">
+        </div>
+
+        <div class="action-row">
+          <button id="submitRoundButton" class="action-button" type="button">Submit Guess</button>
+          <button id="nextRoundButton" class="action-button action-button-secondary" type="button">Next Round</button>
+          <button id="restartButton" class="action-button action-button-ghost" type="button">Restart Game</button>
+        </div>
+      </section>
+
+      <section class="dataset-panel" aria-live="polite" aria-label="Round feedback and input details">
         <article class="dataset-card">
-          <h2 class="dataset-title">Click Stats</h2>
-          <p id="selectedCellLabel" class="dataset-description">No clicks recorded yet.</p>
+          <h2 class="dataset-title">Round Result</h2>
+          <p id="selectedCellLabel" class="dataset-description">Submit a guess to score points.</p>
           <dl class="metric-grid">
             <div class="metric-row">
-              <dt>Score</dt>
+              <dt>Accuracy</dt>
               <dd id="selectedTemperatureValue">--</dd>
             </div>
             <div class="metric-row">
-              <dt>Active Combo</dt>
+              <dt>Points Awarded</dt>
               <dd id="selectedLatencyValue">--</dd>
             </div>
             <div class="metric-row">
-              <dt>Best Combo</dt>
-              <dd id="selectedErrorRateValue">--</dd>
+              <dt>Total Score</dt>
+              <dd id="selectedErrorRateValue">0</dd>
+            </div>
+            <div class="metric-row">
+              <dt>Score Breakdown</dt>
+              <dd id="scoreBreakdownValue">--</dd>
             </div>
           </dl>
         </article>
 
         <article class="dataset-card">
-          <h2 class="dataset-title">Recent Input</h2>
-          <p class="dataset-description">Tracks points from the most recent click.</p>
+          <h2 class="dataset-title">Input Summary</h2>
+          <p class="dataset-description">Tracks interactions across the current game.</p>
           <dl class="metric-grid">
             <div class="metric-row">
-              <dt>Last Gain</dt>
-              <dd id="deviationTemperatureValue">--</dd>
+              <dt>Total Adjustments</dt>
+              <dd id="deviationTemperatureValue">0</dd>
             </div>
             <div class="metric-row">
-              <dt>Total Clicks</dt>
-              <dd id="deviationLatencyValue">--</dd>
+              <dt>Red / Green / Blue</dt>
+              <dd id="deviationLatencyValue">0 / 0 / 0</dd>
             </div>
             <div class="metric-row">
-              <dt>Top Combo</dt>
-              <dd id="deviationErrorRateValue">--</dd>
+              <dt>Round Guess</dt>
+              <dd id="deviationErrorRateValue">RGB(128, 128, 128)</dd>
             </div>
           </dl>
-          <p id="selectionVerdictValue" class="selection-verdict is-pending">Awaiting click</p>
+          <p id="selectionVerdictValue" class="selection-verdict is-pending">Awaiting input</p>
+          <p id="feedbackDetailValue" class="feedback-detail">Submit a round to view scoring feedback.</p>
+          <p id="feedbackTagsValue" class="feedback-tags">Balanced round</p>
         </article>
       </section>
 
-      <section class="event-feed" aria-live="polite" aria-label="Round event feed">
-        <h2 class="event-feed-title">Round Feed</h2>
-        <p id="eventFeedValue" class="event-feed-message">Start the round and click the board to score points.</p>
+      <section class="event-feed" aria-live="polite" aria-label="Game event feed">
+        <h2 class="event-feed-title">Game Feed</h2>
+        <p id="eventFeedValue" class="event-feed-message">Press Start Game to begin the first round.</p>
       </section>
+
+      <div id="overlay" class="overlay visible">
+        <h2 id="overlayTitle" class="overlay-title">Color Match Challenge</h2>
+        <p id="overlayMessage" class="overlay-message">Start the game, adjust RGB channels, and submit your guess each round.</p>
+        <button id="startButton" class="action-button" type="button">Start Game</button>
+      </div>
 
       <footer class="game-footer">
         <ul class="controls-list">
-          <li><kbd>Click</kbd> Score points</li>
-          <li><kbd>Enter</kbd> Start or continue</li>
-          <li><kbd>P</kbd> Pause</li>
-          <li><kbd>R</kbd> Restart</li>
+          <li><kbd>Enter</kbd> Submit guess / start next round</li>
+          <li><kbd>R/F</kbd> Red +5 / -5</li>
+          <li><kbd>G/H</kbd> Green +5 / -5</li>
+          <li><kbd>B/N</kbd> Blue +5 / -5</li>
         </ul>
       </footer>
     </section>

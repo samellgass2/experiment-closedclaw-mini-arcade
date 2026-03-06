@@ -1,35 +1,25 @@
-# TASK REPORT
-
-## Task
-- TASK_ID: 111
-- RUN_ID: 190
-- Title: Update STATUS.md
+# Task Report: TASK_ID 117 (RUN_ID 196)
 
 ## Summary
-Updated `STATUS.md` to accurately reflect the current clicker game implementation status, including gameplay state flow, scoring/combo logic, countdown behavior, runtime UI wiring, and existing automated test coverage.
+Updated `STATUS.md` to accurately document the current development state of the Color Matching Game.
 
-## Files Changed
-- `STATUS.md`
-- `TASK_REPORT.md`
-
-## Implementation Details
-- Updated project workflow label in `STATUS.md` to `Implement Clicker Game`.
-- Added a new `Task 111 Update (RUN_ID 190)` section documenting:
-  - Clicker state machine lifecycle and transitions.
-  - Scoring, combo, best-score persistence behavior.
-  - Countdown timer semantics (running, paused, timeout-to-over).
-  - Runtime/UI integration points in `js/game.js` and `index.html`.
-  - Coverage provided by `tests/clicker.logic.test.mjs`.
-- Included verification command results in the Task 111 status section.
+## Changes Made
+- Updated project workflow label in `STATUS.md` to `Implement Color Matching Game`.
+- Added `Task 117 Update (RUN_ID 196)` section in `STATUS.md` describing:
+  - Current game lifecycle and round progression states.
+  - RGB input controls, clamping behavior, and adjustment tracking.
+  - Scoring model, feedback payloads, and performance summary metrics.
+  - UI wiring across `index.html`, `css/styles.css`, and `js/game.js`.
+  - Best-score persistence behavior.
+- Added explicit verification command results and acceptance mapping for Task 117.
 
 ## Verification
+Executed and passed:
 1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
-   - PASS
-2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs`
-   - PASS
-   - `anomaly.logic.test: ok`
-   - `clicker.logic.test: ok`
+2. `node tests/color-match.logic.test.mjs`
+3. `node tests/clicker.logic.test.mjs`
+4. `node tests/anomaly.logic.test.mjs`
 
-## Acceptance Test Mapping
-- Check that `STATUS.md` reflects the current state of the clicker game development: **met**
-  - `STATUS.md` now includes a dedicated Task 111 status snapshot tied to the clicker codepaths and current test outcomes.
+## Acceptance Criteria Mapping
+- Verify that `STATUS.md` reflects the current state of the color matching game development accurately: satisfied.
+  - `STATUS.md` now includes a dedicated Task 117 progress section with implementation and validation details aligned to the current codebase.
