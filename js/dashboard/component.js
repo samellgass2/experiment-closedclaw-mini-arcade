@@ -9,7 +9,7 @@ import {
   updateDashboardTileScore
 } from "./logic.js";
 import { createGameTileElement, updateGameTileElementScore } from "./gameTile.js";
-import { createFlappyGameWidget } from "../flappy/index.js";
+import { createDashboardGameWidget } from "./gameWidget.js";
 
 function createNode(tagName, className, textContent = "") {
   const node = document.createElement(tagName);
@@ -106,13 +106,28 @@ function createShell(root) {
   tileList.id = "dashboardTileList";
   tileList.setAttribute("aria-label", "Active game tiles");
 
-  root.append(title, subtitle, toolbar, status, tileList);
+  const gameView = createNode("section", "dashboard-game-view");
+  gameView.hidden = true;
+  const backButton = createNode("button", "tile-button tile-button-secondary", "Back to Dashboard");
+  backButton.type = "button";
+  backButton.id = "dashboardBackButton";
+  const gameTitle = createNode("h2", "dashboard-title", "");
+  const gameHost = createNode("div", "dashboard-game-host");
+  gameHost.id = "dashboardGameHost";
+  gameView.append(backButton, gameTitle, gameHost);
+
+  root.append(title, subtitle, toolbar, status, tileList, gameView);
 
   return {
+    toolbar,
     addButton,
     select,
     status,
-    tileList
+    tileList,
+    gameView,
+    backButton,
+    gameTitle,
+    gameHost
   };
 }
 
@@ -125,41 +140,36 @@ export function createDashboardComponent(options = {}) {
   });
 
   const ui = createShell(root);
-  const tileGameControllers = new Map();
+  let activeGameTileId = null;
+  let activeGameController = null;
   let dragTileId = null;
 
-  function destroyTileGames() {
-    for (const controller of tileGameControllers.values()) {
-      if (controller && typeof controller.destroy === "function") {
-        controller.destroy();
-      }
+  function destroyActiveGame() {
+    if (activeGameController && typeof activeGameController.destroy === "function") {
+      activeGameController.destroy();
     }
-    tileGameControllers.clear();
+    activeGameController = null;
+    ui.gameHost.innerHTML = "";
   }
 
-  function mountTileGames(snapshot) {
-    for (const tile of snapshot.tiles) {
-      if (tile.id !== "flappy") {
-        continue;
-      }
-
-      const tileElement = ui.tileList.querySelector(`.dashboard-tile[data-tile-id="${tile.id}"]`);
-      if (!(tileElement instanceof HTMLElement)) {
-        continue;
-      }
-
-      const host = createNode("div", "tile-game-host");
-      tileElement.append(host);
-
-      const controller = createFlappyGameWidget({
-        root: host,
-        onScoreChange(score) {
-          setGameScore(tile.id, score);
-        }
-      });
-
-      tileGameControllers.set(tile.id, controller);
+  function mountActiveGame(snapshot) {
+    if (!activeGameTileId) {
+      return;
     }
+
+    const tile = snapshot.tiles.find((entry) => entry.id === activeGameTileId);
+    if (!tile) {
+      activeGameTileId = null;
+      return;
+    }
+
+    ui.gameTitle.textContent = tile.name;
+    activeGameController = createDashboardGameWidget(activeGameTileId, {
+      root: ui.gameHost,
+      onScoreChange(score) {
+        setGameScore(activeGameTileId, score);
+      }
+    });
   }
 
   function notifyChange() {
@@ -169,7 +179,7 @@ export function createDashboardComponent(options = {}) {
   }
 
   function render() {
-    destroyTileGames();
+    destroyActiveGame();
     const snapshot = getDashboardSnapshot(state);
     updateStatusBanner(ui.status, snapshot);
     updateAddControls(ui.addButton, ui.select, snapshot);
@@ -185,7 +195,15 @@ export function createDashboardComponent(options = {}) {
       ui.tileList.append(createGameTileElement(tile, tile.position, snapshot.tileCount));
     }
 
-    mountTileGames(snapshot);
+    const inGameView = Boolean(activeGameTileId);
+    ui.toolbar.hidden = inGameView;
+    ui.status.hidden = inGameView;
+    ui.tileList.hidden = inGameView;
+    ui.gameView.hidden = !inGameView;
+    if (inGameView) {
+      mountActiveGame(snapshot);
+    }
+
     notifyChange();
     return snapshot;
   }
@@ -218,8 +236,17 @@ export function createDashboardComponent(options = {}) {
     }
 
     const action = button.dataset.action;
+    if (action === "launch") {
+      activeGameTileId = tileId;
+      render();
+      return;
+    }
+
     if (action === "remove") {
       removeDashboardTile(state, tileId);
+      if (activeGameTileId === tileId) {
+        activeGameTileId = null;
+      }
       render();
       return;
     }
@@ -346,6 +373,10 @@ export function createDashboardComponent(options = {}) {
 
   function bindEvents() {
     ui.addButton.addEventListener("click", handleAdd);
+    ui.backButton.addEventListener("click", () => {
+      activeGameTileId = null;
+      render();
+    });
     ui.tileList.addEventListener("click", handleTileAction);
 
     ui.tileList.addEventListener("dragstart", handleDragStart);
@@ -363,6 +394,6 @@ export function createDashboardComponent(options = {}) {
     render,
     getSnapshot: () => getDashboardSnapshot(state),
     setGameScore,
-    destroy: destroyTileGames
+    destroy: destroyActiveGame
   };
 }

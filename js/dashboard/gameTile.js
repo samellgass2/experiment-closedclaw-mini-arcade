@@ -32,6 +32,11 @@ export function createGameTileElement(game, index, tileCount) {
 
   const controls = createNode("div", "tile-controls");
 
+  const launchButton = createNode("button", "tile-button tile-button-secondary", "Launch");
+  launchButton.type = "button";
+  launchButton.dataset.action = "launch";
+  launchButton.setAttribute("aria-label", `Launch ${game.name}`);
+
   const moveLeftButton = createNode("button", "tile-button tile-button-secondary", "Move Left");
   moveLeftButton.type = "button";
   moveLeftButton.dataset.action = "move-left";
@@ -49,7 +54,7 @@ export function createGameTileElement(game, index, tileCount) {
   removeButton.dataset.action = "remove";
   removeButton.setAttribute("aria-label", `Remove ${game.name} tile from dashboard`);
 
-  controls.append(moveLeftButton, moveRightButton, removeButton);
+  controls.append(launchButton, moveLeftButton, moveRightButton, removeButton);
   item.append(heading, summary, meta, score, controls);
   return item;
 }
