@@ -1,34 +1,26 @@
 # TASK REPORT
 
 ## Task
-- TASK_ID: 110
-- RUN_ID: 189
-- Title: Design Clicker Game UI
+- TASK_ID: 111
+- RUN_ID: 190
+- Title: Update STATUS.md
 
 ## Summary
-Implemented a clicker-focused UI refresh that makes score and timer the primary HUD elements, adds a visual timer progress bar, and keeps supporting metrics (clicks, combo, status) in a cleaner secondary row.
+Updated `STATUS.md` to accurately reflect the current clicker game implementation status, including gameplay state flow, scoring/combo logic, countdown behavior, runtime UI wiring, and existing automated test coverage.
 
 ## Files Changed
-- `index.html`
-- `css/styles.css`
-- `js/game.js`
 - `STATUS.md`
 - `TASK_REPORT.md`
 
 ## Implementation Details
-- Reworked clicker HUD structure in `index.html`:
-  - Added a dedicated primary HUD row for `Score` and `Timer`.
-  - Added timer progress fill element (`timerProgressValue`) for at-a-glance remaining time.
-  - Moved click count, top combo, and game status into a compact secondary HUD row.
-- Updated HUD styling in `css/styles.css`:
-  - Added primary/secondary HUD grid layouts.
-  - Added emphasis typography for score and timer values.
-  - Added timer track/fill visuals with smooth width transitions.
-  - Improved mobile behavior by collapsing HUD rows to single-column cards.
-- Updated runtime UI bindings/rendering in `js/game.js`:
-  - Switched bindings to new IDs (`clicksValue`, `comboValue`, `timerProgressValue`).
-  - Added timer progress computation from `remainingMs / roundDurationMs`.
-  - Continued rendering score and formatted countdown in real time.
+- Updated project workflow label in `STATUS.md` to `Implement Clicker Game`.
+- Added a new `Task 111 Update (RUN_ID 190)` section documenting:
+  - Clicker state machine lifecycle and transitions.
+  - Scoring, combo, best-score persistence behavior.
+  - Countdown timer semantics (running, paused, timeout-to-over).
+  - Runtime/UI integration points in `js/game.js` and `index.html`.
+  - Coverage provided by `tests/clicker.logic.test.mjs`.
+- Included verification command results in the Task 111 status section.
 
 ## Verification
 1. `find js tests -type f \( -name '*.js' -o -name '*.mjs' \) -print -exec node --check {} \;`
@@ -39,7 +31,5 @@ Implemented a clicker-focused UI refresh that makes score and timer the primary 
    - `clicker.logic.test: ok`
 
 ## Acceptance Test Mapping
-- Verify that the UI displays the score and timer correctly and is user-friendly: **met**
-  - Score and timer now occupy primary emphasized HUD cards.
-  - Timer readout remains live and is reinforced with a visual progress bar.
-  - Supporting information remains visible but de-emphasized for clarity.
+- Check that `STATUS.md` reflects the current state of the clicker game development: **met**
+  - `STATUS.md` now includes a dedicated Task 111 status snapshot tied to the clicker codepaths and current test outcomes.

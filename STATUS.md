@@ -2,7 +2,7 @@
 
 ## Project
 - Name: `experiment-mini-arcade`
-- Workflow: `Implement Anomaly Detection Game`
+- Workflow: `Implement Clicker Game`
 - Snapshot Date (UTC): `2026-03-06`
 
 ## Task 102 Update (RUN_ID 181)
@@ -476,3 +476,43 @@ Designed and implemented a clearer clicker game UI with emphasis on score and ti
   - PASS: Score and timer now occupy primary high-contrast HUD cards with larger typography.
   - PASS: Timer remains text-based and is reinforced by a live visual progress bar.
   - PASS: Secondary gameplay stats remain visible without competing with core score/timer focus.
+
+## Task 111 Update (RUN_ID 190)
+Updated project status documentation to reflect the current clicker game implementation and validation state.
+
+### Current Clicker Game State
+- Gameplay loop and status transitions are active and verified:
+  - `READY` -> `RUNNING` -> `PAUSED` -> `RUNNING` -> `OVER`
+- Score system is implemented in `js/clicker/logic.js`:
+  - Per-click points
+  - Combo streak tracking with configurable bonus cap
+  - Best-score persistence via `localStorage`
+- Countdown timer behavior is implemented and stable:
+  - Remaining time decreases during `RUNNING`
+  - Timer does not decrease during `PAUSED`
+  - Round ends automatically at zero with `finalReason: time-expired`
+- Runtime/UI wiring is implemented in `js/game.js` and `index.html`:
+  - Canvas click input registers scoring events
+  - HUD displays score, best score, clicks, top combo, and countdown timer
+  - Timer progress bar updates from `remainingMs / roundDurationMs`
+  - Overlay flow supports start, pause/resume, and round-complete restart path
+- Automated test coverage for clicker logic exists in `tests/clicker.logic.test.mjs`:
+  - Auto-start + scoring
+  - Combo bonus progression
+  - Pause/resume behavior
+  - Rejected clicks outside running state
+  - Timeout-to-game-over behavior
+  - Reset and snapshot state checks
+
+### Verification (Task 111)
+1. `find js tests -type f \\( -name '*.js' -o -name '*.mjs' \\) -print -exec node --check {} \\;`
+   - Result: PASS
+2. `node tests/anomaly.logic.test.mjs && node tests/clicker.logic.test.mjs`
+   - Result: PASS
+   - Output:
+     - `anomaly.logic.test: ok`
+     - `clicker.logic.test: ok`
+
+### Acceptance Mapping
+- Check that `STATUS.md` reflects the current state of clicker game development:
+  - PASS: This section documents current clicker logic, runtime/UI wiring, timer/score behavior, and test validation.
