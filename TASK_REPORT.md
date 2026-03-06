@@ -1,45 +1,46 @@
-# Task Report: TASK_ID 142 (RUN_ID 228)
+# Task Report: TASK_ID 157 (RUN_ID 245)
 
 ## Summary
-Developed a dedicated game tile component for the dashboard that displays each game name and current score, and added score update plumbing so tile scores can be updated live.
+Implemented dashboard layout adjustments to improve coherence and tile interactions. The dashboard is now split into clear control and active-board panels, and drag-and-drop rearrangement uses explicit drop slots for predictable reordering (including first/last placement).
 
 ## Changes
-- Added new tile component module: `js/dashboard/gameTile.js`
-  - `createGameTileElement(game, index, tileCount)` renders a full game tile with:
-    - game name
-    - game description and metadata
-    - `Current Score` display
-    - tile controls (move left/right, remove)
-  - `updateGameTileElementScore(tileElement, score)` updates the score view in-place.
-- Extended dashboard state logic: `js/dashboard/logic.js`
-  - added per-game score map (`scoresByTileId`)
-  - added `initialScores` support in `createDashboardState`
-  - added `updateDashboardTileScore(state, tileId, score)`
-  - updated `getDashboardSnapshot` tiles to include `score`
-- Refactored dashboard UI: `js/dashboard/component.js`
-  - switched tile rendering to use `createGameTileElement`
-  - added `setGameScore(tileId, score)` API to update score and status
-  - returns `setGameScore` from `createDashboardComponent`
-- Updated exports: `js/dashboard/index.js`
-  - now exports the new game tile module
-- Updated app bootstrap: `js/game.js`
-  - `window.__MINI_ARCADE_DASHBOARD__` now exposes `setGameScore`
-- Updated dashboard styles: `css/styles.css`
-  - added `.tile-score` and `.tile-score-value` styling
+- Updated dashboard component structure: `js/dashboard/component.js`
+  - introduced a two-panel layout (`Catalog Controls` + `Active Board`)
+  - added live tile count display (`current/max`)
+  - replaced tile-to-tile drop targeting with explicit insertion slots between tiles
+  - added deterministic drop handling via insertion index
+  - preserved add/remove/move-left/move-right behavior
+- Enhanced tile rendering: `js/dashboard/gameTile.js`
+  - added tile position label (`Slot X of N`)
+  - added drag guidance text for discoverability
+  - kept score rendering and tile action controls
+- Extended dashboard logic: `js/dashboard/logic.js`
+  - added `repositionDashboardTile(state, tileId, insertionIndex)`
+  - supports insertion-style moves with proper index normalization and no-op/out-of-range handling
+- Refined styling: `css/styles.css`
+  - added panelized dashboard layout styles
+  - added drop-slot styling and active drag target states
+  - added responsive behavior for panel stacking on smaller screens
+  - updated tile heading/position/hint visuals
 - Expanded tests: `tests/dashboard.logic.test.mjs`
-  - validates score defaults in snapshots
-  - validates successful score updates and error behavior for missing tiles
+  - added coverage for insertion-index reordering via `repositionDashboardTile`
+  - validates forward, backward, no-op, and out-of-range cases
 
 ## Verification
 Executed:
-- `node --test tests/*.mjs`
-- `node --check js/dashboard/logic.js && node --check js/dashboard/component.js && node --check js/dashboard/gameTile.js && node --check js/game.js`
+- `for f in tests/*.test.mjs; do node "$f"; done`
+- `node --check js/dashboard/component.js && node --check js/dashboard/gameTile.js && node --check js/dashboard/logic.js`
 
 Results:
-- PASS: all tests passed
-- PASS: syntax checks passed
+- PASS: all test files passed
+- PASS: updated dashboard modules passed syntax checks
 
 ## Acceptance Coverage
-- Each game tile displays game name: PASS (rendered via `createGameTileElement`, title in `.tile-title`)
-- Each game tile displays current score: PASS (rendered in `.tile-score-value` from snapshot score)
-- Score updates are reflected: PASS (`setGameScore` -> `updateDashboardTileScore` -> tile DOM update/snapshot update)
+- Add game tiles: PASS
+  - unchanged add flow retained and validated by existing logic tests
+- Remove game tiles: PASS
+  - unchanged remove flow retained and validated by existing logic tests
+- Rearrange game tiles: PASS
+  - directional move buttons remain functional
+  - drag-and-drop now uses explicit drop slots for reliable insertion ordering
+  - insertion-style logic validated with new unit tests

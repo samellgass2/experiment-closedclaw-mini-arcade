@@ -24,11 +24,19 @@ export function createGameTileElement(game, index, tileCount) {
   item.dataset.score = String(normalizeScore(game.score));
   item.draggable = true;
 
+  const headingRow = createNode("div", "tile-heading-row");
   const heading = createNode("h3", "tile-title", game.name);
+  const position = createNode("p", "tile-position", `Slot ${index + 1} of ${tileCount}`);
+  headingRow.append(heading, position);
+
   const summary = createNode("p", "tile-summary", game.description);
   const meta = createNode("p", "tile-meta", `${game.mode} | ${game.difficulty}`);
-  const score = createNode("p", "tile-score");
-  score.innerHTML = `Current Score: <strong class="tile-score-value">${item.dataset.score}</strong>`;
+
+  const dragHint = createNode("p", "tile-drag-hint", "Drag tile to a drop slot to rearrange.");
+
+  const score = createNode("p", "tile-score", "Current Score: ");
+  const scoreValue = createNode("strong", "tile-score-value", item.dataset.score);
+  score.append(scoreValue);
 
   const controls = createNode("div", "tile-controls");
 
@@ -50,7 +58,7 @@ export function createGameTileElement(game, index, tileCount) {
   removeButton.setAttribute("aria-label", `Remove ${game.name} tile from dashboard`);
 
   controls.append(moveLeftButton, moveRightButton, removeButton);
-  item.append(heading, summary, meta, score, controls);
+  item.append(headingRow, summary, meta, dragHint, score, controls);
   return item;
 }
 

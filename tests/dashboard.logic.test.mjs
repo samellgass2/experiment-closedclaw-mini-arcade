@@ -7,6 +7,7 @@ import {
   getDashboardAvailableGames,
   getDashboardSnapshot,
   moveDashboardTile,
+  repositionDashboardTile,
   rearrangeDashboardTiles,
   removeDashboardTile,
   updateDashboardTileScore
@@ -76,6 +77,30 @@ function testRearrangeTiles() {
   assert.equal(outOfRange.reason, "out-of-range");
 }
 
+function testRepositionTileByInsertionIndex() {
+  const state = createDashboardState({
+    initialTileIds: ["racing", "clicker", "color-match", "anomaly"]
+  });
+
+  const moveForward = repositionDashboardTile(state, "clicker", 4);
+  assert.equal(moveForward.accepted, true);
+  assert.deepEqual(state.tileIds, ["racing", "color-match", "anomaly", "clicker"]);
+  assert.equal(moveForward.toIndex, 3);
+
+  const moveBackward = repositionDashboardTile(state, "anomaly", 0);
+  assert.equal(moveBackward.accepted, true);
+  assert.deepEqual(state.tileIds, ["anomaly", "racing", "color-match", "clicker"]);
+  assert.equal(moveBackward.toIndex, 0);
+
+  const noOp = repositionDashboardTile(state, "racing", 2);
+  assert.equal(noOp.accepted, false);
+  assert.equal(noOp.reason, "no-op");
+
+  const outOfRange = repositionDashboardTile(state, "clicker", 5);
+  assert.equal(outOfRange.accepted, false);
+  assert.equal(outOfRange.reason, "out-of-range");
+}
+
 function testDirectionalMoveAndSnapshot() {
   const state = createDashboardState({
     initialTileIds: ["racing", "clicker", "color-match"]
@@ -122,6 +147,7 @@ function run() {
   testAddTile();
   testRemoveTile();
   testRearrangeTiles();
+  testRepositionTileByInsertionIndex();
   testDirectionalMoveAndSnapshot();
   testUpdateTileScore();
   console.log("dashboard.logic.test: ok");

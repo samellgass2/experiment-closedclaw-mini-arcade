@@ -4,7 +4,7 @@ import {
   createDashboardState,
   getDashboardSnapshot,
   moveDashboardTile,
-  rearrangeDashboardTiles,
+  repositionDashboardTile,
   removeDashboardTile,
   updateDashboardTileScore
 } from "./logic.js";
@@ -26,6 +26,16 @@ function assertRootElement(root) {
     throw new Error("Dashboard root element is required.");
   }
   return root;
+}
+
+function createDropSlot(insertionIndex) {
+  const slot = createNode("li", "dashboard-drop-slot");
+  slot.dataset.insertIndex = String(insertionIndex);
+  slot.setAttribute("aria-hidden", "true");
+
+  const marker = createNode("span", "dashboard-drop-slot-marker", "Drop tile here");
+  slot.append(marker);
+  return slot;
 }
 
 function renderEmptyState(tileList) {
@@ -74,6 +84,11 @@ function updateAddControls(addButton, selectNode, snapshot) {
   }
 }
 
+function clearDropTargetStyles(tileList) {
+  const highlightedTargets = tileList.querySelectorAll(".dashboard-drop-slot.is-drop-target");
+  highlightedTargets.forEach((slot) => slot.classList.remove("is-drop-target"));
+}
+
 function createShell(root) {
   root.innerHTML = "";
 
@@ -84,7 +99,19 @@ function createShell(root) {
     "Build your game board by adding, removing, and rearranging tiles."
   );
 
-  const toolbar = createNode("section", "dashboard-toolbar");
+  const layout = createNode("div", "dashboard-layout");
+
+  const controlsPanel = createNode("section", "dashboard-panel dashboard-controls-panel");
+  controlsPanel.setAttribute("aria-label", "Dashboard controls");
+
+  const controlsTitle = createNode("h2", "dashboard-panel-title", "Catalog Controls");
+  const controlsHelp = createNode(
+    "p",
+    "dashboard-panel-help",
+    "Choose a game from the catalog and add it to your active tile board."
+  );
+
+  const toolbar = createNode("div", "dashboard-toolbar");
   toolbar.setAttribute("aria-label", "Dashboard tile controls");
 
   const select = document.createElement("select");
@@ -101,17 +128,38 @@ function createShell(root) {
   status.id = "dashboardStatus";
   status.setAttribute("aria-live", "polite");
 
+  controlsPanel.append(controlsTitle, controlsHelp, toolbar, status);
+
+  const boardPanel = createNode("section", "dashboard-panel dashboard-board-panel");
+  boardPanel.setAttribute("aria-label", "Active game tiles");
+
+  const boardHeader = createNode("div", "dashboard-board-header");
+  const boardTitle = createNode("h2", "dashboard-panel-title", "Active Board");
+  const boardCount = createNode("p", "dashboard-board-count", "");
+  boardCount.id = "dashboardTileCount";
+
+  const boardHelp = createNode(
+    "p",
+    "dashboard-panel-help",
+    "Drag any tile and drop it between cards to rearrange your dashboard order."
+  );
+
   const tileList = createNode("ol", "dashboard-grid");
   tileList.id = "dashboardTileList";
   tileList.setAttribute("aria-label", "Active game tiles");
 
-  root.append(title, subtitle, toolbar, status, tileList);
+  boardHeader.append(boardTitle, boardCount);
+  boardPanel.append(boardHeader, boardHelp, tileList);
+
+  layout.append(controlsPanel, boardPanel);
+  root.append(title, subtitle, layout);
 
   return {
     addButton,
     select,
     status,
-    tileList
+    tileList,
+    boardCount
   };
 }
 
@@ -136,6 +184,7 @@ export function createDashboardComponent(options = {}) {
     const snapshot = getDashboardSnapshot(state);
     updateStatusBanner(ui.status, snapshot);
     updateAddControls(ui.addButton, ui.select, snapshot);
+    ui.boardCount.textContent = `${snapshot.tileCount}/${snapshot.maxTiles} Tiles`;
 
     ui.tileList.innerHTML = "";
     if (snapshot.tiles.length === 0) {
@@ -144,12 +193,26 @@ export function createDashboardComponent(options = {}) {
       return snapshot;
     }
 
+    ui.tileList.append(createDropSlot(0));
     for (const tile of snapshot.tiles) {
       ui.tileList.append(createGameTileElement(tile, tile.position, snapshot.tileCount));
+      ui.tileList.append(createDropSlot(tile.position + 1));
     }
 
     notifyChange();
     return snapshot;
+  }
+
+  function resolveTileIdFromDrop(event) {
+    return (event.dataTransfer && event.dataTransfer.getData("text/plain")) || dragTileId || "";
+  }
+
+  function clearDragStyles() {
+    dragTileId = null;
+    clearDropTargetStyles(ui.tileList);
+    const tiles = ui.tileList.querySelectorAll(".dashboard-tile");
+    tiles.forEach((tile) => tile.classList.remove("is-dragging"));
+    ui.tileList.classList.remove("is-sorting");
   }
 
   function handleAdd() {
@@ -204,6 +267,11 @@ export function createDashboardComponent(options = {}) {
       return;
     }
 
+    if (target.closest("button")) {
+      event.preventDefault();
+      return;
+    }
+
     const tile = target.closest(".dashboard-tile");
     if (!(tile instanceof HTMLElement) || !tile.dataset.tileId) {
       return;
@@ -211,6 +279,8 @@ export function createDashboardComponent(options = {}) {
 
     dragTileId = tile.dataset.tileId;
     tile.classList.add("is-dragging");
+    ui.tileList.classList.add("is-sorting");
+
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", dragTileId);
@@ -223,8 +293,8 @@ export function createDashboardComponent(options = {}) {
       return;
     }
 
-    const tile = target.closest(".dashboard-tile");
-    if (!(tile instanceof HTMLElement)) {
+    const slot = target.closest(".dashboard-drop-slot");
+    if (!(slot instanceof HTMLElement)) {
       return;
     }
 
@@ -232,7 +302,9 @@ export function createDashboardComponent(options = {}) {
     if (event.dataTransfer) {
       event.dataTransfer.dropEffect = "move";
     }
-    tile.classList.add("is-drop-target");
+
+    clearDropTargetStyles(ui.tileList);
+    slot.classList.add("is-drop-target");
   }
 
   function handleDragLeave(event) {
@@ -241,48 +313,55 @@ export function createDashboardComponent(options = {}) {
       return;
     }
 
-    const tile = target.closest(".dashboard-tile");
-    if (!(tile instanceof HTMLElement)) {
+    const slot = target.closest(".dashboard-drop-slot");
+    if (!(slot instanceof HTMLElement)) {
       return;
     }
 
-    tile.classList.remove("is-drop-target");
-  }
+    if (event.relatedTarget instanceof Node && slot.contains(event.relatedTarget)) {
+      return;
+    }
 
-  function clearDragStyles() {
-    const tiles = ui.tileList.querySelectorAll(".dashboard-tile");
-    tiles.forEach((tile) => tile.classList.remove("is-drop-target", "is-dragging"));
+    slot.classList.remove("is-drop-target");
   }
 
   function handleDrop(event) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
-      return;
-    }
-
-    const dropTile = target.closest(".dashboard-tile");
-    if (!(dropTile instanceof HTMLElement)) {
-      return;
-    }
-
-    event.preventDefault();
-    const sourceTileId =
-      (event.dataTransfer && event.dataTransfer.getData("text/plain")) || dragTileId || "";
-
-    if (!sourceTileId || !dropTile.dataset.tileId || sourceTileId === dropTile.dataset.tileId) {
       clearDragStyles();
       return;
     }
 
-    const sourceIndex = state.tileIds.indexOf(sourceTileId);
-    const targetIndex = state.tileIds.indexOf(dropTile.dataset.tileId);
-    rearrangeDashboardTiles(state, sourceIndex, targetIndex);
+    event.preventDefault();
+    const sourceTileId = resolveTileIdFromDrop(event);
+
+    if (!sourceTileId) {
+      clearDragStyles();
+      return;
+    }
+
+    const slot = target.closest(".dashboard-drop-slot");
+    if (slot instanceof HTMLElement && typeof slot.dataset.insertIndex === "string") {
+      const insertIndex = Number.parseInt(slot.dataset.insertIndex, 10);
+      repositionDashboardTile(state, sourceTileId, insertIndex);
+      clearDragStyles();
+      render();
+      return;
+    }
+
+    const dropTile = target.closest(".dashboard-tile");
+    if (dropTile instanceof HTMLElement && typeof dropTile.dataset.position === "string") {
+      const insertIndex = Number.parseInt(dropTile.dataset.position, 10);
+      repositionDashboardTile(state, sourceTileId, insertIndex);
+      clearDragStyles();
+      render();
+      return;
+    }
+
     clearDragStyles();
-    render();
   }
 
   function handleDragEnd() {
-    dragTileId = null;
     clearDragStyles();
   }
 
