@@ -1,30 +1,21 @@
-# Task Report: TASK_ID 131 (RUN_ID 214)
+# Task Report: TASK_ID 132 (RUN_ID 216)
 
 ## Summary
-Implemented a shared local-storage persistence layer for scores and integrated it across score-based games so best scores are safely saved and restored across sessions.
+Integrated the persistence layer with all game score flows by standardizing racing and anomaly persistence usage, and verified retrieval/update behavior for each game via tests.
 
 ## Changes
-- Added `js/storage/score.js` with reusable helpers:
-  - `resolveStorage(storageOverride)`
-  - `readScore(storage, key, fallback)`
-  - `writeScore(storage, key, value)`
-  - Includes input normalization and failure-safe behavior for unavailable/throwing storage APIs.
-- Refactored score persistence in game logic modules:
-  - `js/anomaly/state.js`
-  - `js/clicker/logic.js`
-  - `js/color-match/logic.js`
-  - Replaced duplicated ad-hoc read/write logic with the shared storage helper.
-- Expanded tests to validate save + retrieval persistence behavior across sessions:
-  - `tests/anomaly.logic.test.mjs`
-  - `tests/clicker.logic.test.mjs`
-  - `tests/color-match.logic.test.mjs`
-- Added dedicated storage utility tests:
-  - `tests/storage.score.test.mjs`
-  - Covers round-trip write/read, invalid stored values, write failures, and storage resolution behavior.
+- Refactored racing persistence to use shared score storage helpers:
+  - Updated `js/racing/logic.js` to use `resolveStorage`, `readScore`, and `writeScore` from `js/storage/score.js`.
+  - Replaced custom racing best-lap storage read/write logic with shared persistence layer wrappers.
+- Standardized anomaly state creation to accept injected persistence storage:
+  - Updated `js/anomaly/state.js` `createGameState(runtime = {})` to resolve storage via shared `resolveStorage(runtime.storage)`.
+- Expanded persistence acceptance coverage:
+  - Added racing cross-session persistence test in `tests/racing.logic.test.mjs` to verify best lap is restored from storage.
+  - Updated anomaly persistence test in `tests/anomaly.logic.test.mjs` to validate storage injection and cross-session restoration behavior.
 
 ## Verification
 Executed:
-`for f in tests/*.mjs; do node "$f"; done`
+`for test_file in tests/*.test.mjs; do node "$test_file"; done`
 
 Result:
 - anomaly.logic.test: ok
@@ -35,6 +26,7 @@ Result:
 - storage.score.test: ok
 
 ## Acceptance Coverage
-- Scores are persisted in local storage via shared write helper.
-- Persisted scores are retrieved on fresh state creation (simulated new sessions in tests).
-- Persistence path is resilient to invalid/missing data and storage API failures.
+- `clicker`: best score persists and is reloaded across sessions (`tests/clicker.logic.test.mjs`).
+- `color-match`: best score persists and is reloaded across sessions (`tests/color-match.logic.test.mjs`).
+- `anomaly`: best score persists and is reloaded via persistence layer storage injection (`tests/anomaly.logic.test.mjs`).
+- `racing`: best lap persists and is reloaded across sessions using shared persistence helpers (`tests/racing.logic.test.mjs`).

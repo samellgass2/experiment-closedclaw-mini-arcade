@@ -19,8 +19,8 @@ function createRoundSeed(level, score) {
   };
 }
 
-export function createGameState() {
-  const storage = resolveStorage();
+export function createGameState(runtime = {}) {
+  const storage = resolveStorage(runtime.storage);
   const bestScore = loadBestScore(storage);
 
   return {
