@@ -49,6 +49,39 @@ Open:
 
 - `http://localhost:8000/`
 
+## Usage Guide
+
+The default app view is the **Mini Arcade Dashboard**. It starts with an `Active Board` and `Catalog Controls` panel.
+
+### Build and manage your board
+
+1. In `Catalog Controls`, choose a game in the dropdown (`Top-Down Racing`, `Combo Clicker`, `Color Match`, `Anomaly Detector`).
+2. Click `Add Tile` to place that game on the `Active Board`.
+3. Remove any game tile with its `Remove` button.
+4. Reorder tiles with either:
+   - `Move Left` / `Move Right` buttons on each tile, or
+   - drag-and-drop to a `Drop tile here` insertion slot between tiles.
+
+Important behavior:
+
+- Duplicate tiles are blocked (a game can appear only once on the board).
+- The board has a max capacity (`tileCount/maxTiles` shown in the board header).
+- When the board is full, add controls are disabled until you remove a tile.
+
+### Launching games from the dashboard
+
+In the current implementation, dashboard tiles are composition cards (arrangement + status) and do **not** include a direct `Play`/navigation action yet.
+
+- You can organize which games are on your board and in what order.
+- Score updates are supported through the dashboard API (`window.__MINI_ARCADE_DASHBOARD__.setGameScore(tileId, score)`), which updates tile score UI and feedback.
+
+### UI feedback features
+
+- `dashboardStatus` banner announces latest action and success/error state.
+- `Recent Actions` keeps the newest interaction messages (up to 4 items).
+- Board and tile pulse/highlight feedback appears after add/remove/move/score updates.
+- Tile cards show slot position, mode/difficulty metadata, and current score badge/value.
+
 ## Run Tests
 
 Run all logic tests with Node's built-in test runner:

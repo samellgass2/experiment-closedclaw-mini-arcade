@@ -1278,3 +1278,41 @@ Created a root `README.md` with setup, usage, and technical overview content bas
    - PASS
 5. README creation is reflected in `STATUS.md`.
    - PASS
+
+## Task 186 Update (RUN_ID 340)
+Extended `README.md` with a detailed dashboard Usage Guide aligned to implemented dashboard component behavior and prior analyst/status documentation.
+
+### Documentation Added
+- Added a new `Usage Guide` section in `README.md` describing:
+  - how to add tiles from `Catalog Controls`
+  - how to remove tiles from the `Active Board`
+  - how to rearrange tiles via `Move Left`/`Move Right` and drag-drop insertion slots
+  - board constraints (duplicate prevention, max tile capacity, disabled add controls when full)
+  - dashboard interaction feedback (`dashboardStatus`, `Recent Actions`, tile/board highlight pulses)
+- Added a launch behavior note clarifying current implementation status:
+  - tiles are composition/status cards in this build and do not yet provide direct play-route navigation buttons
+  - score updates can be driven through `window.__MINI_ARCADE_DASHBOARD__.setGameScore(tileId, score)`
+
+### Evidence Used
+- `js/dashboard/component.js`
+- `js/dashboard/logic.js`
+- `js/dashboard/gameTile.js`
+- Existing dashboard implementation summaries in prior `STATUS.md` task entries (`Task 141`, `Task 160`)
+
+### Verification
+1. `node --test tests/*.mjs`
+   - Result: PASS (`7` passed, `0` failed)
+
+### Acceptance Mapping
+1. `README.md` contains a `Usage Guide` section.
+   - PASS
+2. Usage Guide explains interaction with the dashboard component.
+   - PASS
+3. Usage Guide explains launch behavior and relevant UI features.
+   - PASS (documents current launch limitation and score-update hook accurately)
+4. Instructions are consistent with implemented project behavior and analyst/status records.
+   - PASS
+5. README formatting remains consistent and readable.
+   - PASS
+6. `STATUS.md` reflects the update.
+   - PASS
