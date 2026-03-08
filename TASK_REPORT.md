@@ -1,21 +1,18 @@
-# Task Report: TASK_ID 186 (RUN_ID 340)
+# Task Report: TASK_ID 187 (RUN_ID 342)
 
 ## Summary
-Extended `README.md` with a detailed `Usage Guide` section for the mini arcade dashboard, covering tile management workflows, current game-launch behavior, and dashboard UI feedback features. Updated `STATUS.md` with a matching Task 186 record and acceptance mapping.
+Added a new `Technical Overview` section to `README.md` covering project architecture, core components, technology stack, and data flow for the experiment mini arcade. Updated `STATUS.md` with a matching Task 187 entry documenting the README update and acceptance coverage.
 
 ## Changes
 - Updated `README.md`:
-  - Added `## Usage Guide`
-  - Documented how to add game tiles from `Catalog Controls`
-  - Documented how to remove tiles from `Active Board`
-  - Documented tile rearrangement with `Move Left`/`Move Right` and drag-drop insertion slots
-  - Documented UI constraints (duplicate prevention, board capacity, disabled add controls)
-  - Documented status/feedback UX (`dashboardStatus`, `Recent Actions`, tile/board pulse feedback)
-  - Clarified current launch behavior: no direct in-dashboard play-route button in this implementation
-  - Included score update hook usage via `window.__MINI_ARCADE_DASHBOARD__.setGameScore(tileId, score)`
+  - Added `## Technical Overview`
+  - Documented architecture layers: `Dashboard`, `Game Tiles`, `Games`, `Persistence Layer`
+  - Described main component responsibilities and relevant module locations
+  - Added technology stack details (`React`, `JavaScript`, `localStorage`, Node test runner)
+  - Added explicit runtime data flow from dashboard initialization to score persistence
 - Updated `STATUS.md`:
-  - Added `Task 186 Update (RUN_ID 340)`
-  - Included evidence, verification, and acceptance mapping for the README usage guide addition
+  - Added `Task 187 Update (RUN_ID 342)`
+  - Included evidence, verification, and acceptance mapping for the technical overview addition
 
 ## Verification
 Executed:
@@ -31,9 +28,8 @@ Result:
 - PASS: `tests/storage.score.test.mjs`
 
 ## Acceptance Coverage
-1. `README.md` contains a `Usage Guide` section: PASS
-2. Section explains dashboard interaction: PASS
-3. Section explains launch behavior and relevant UI features: PASS
-4. Instructions align with implementation and analyst/status records: PASS
-5. README formatting remains consistent/readable: PASS
-6. `STATUS.md` reflects the update: PASS
+1. `README.md` contains a `Technical Overview` section: PASS
+2. Section includes architecture details and component descriptions: PASS
+3. Technology stack and data flow are described as requested: PASS
+4. Markdown formatting is clear and consistent: PASS
+5. `STATUS.md` includes an entry on the updated README: PASS

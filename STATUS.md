@@ -1316,3 +1316,38 @@ Extended `README.md` with a detailed dashboard Usage Guide aligned to implemente
    - PASS
 6. `STATUS.md` reflects the update.
    - PASS
+
+## Task 187 Update (RUN_ID 342)
+Added a dedicated `Technical Overview` section to `README.md` describing architecture, component responsibilities, stack choices, and runtime data flow for the mini-arcade project.
+
+### Documentation Added
+- Added `## Technical Overview` in `README.md` with:
+  - architecture breakdown across `Dashboard`, `Game Tiles`, `Games`, and `Persistence Layer`
+  - main component responsibilities mapped to current module locations
+  - technology stack summary (`React`, `JavaScript`, `localStorage`, Node test runner)
+  - end-to-end data flow from dashboard initialization through score persistence
+
+### Evidence Used
+- `README.md` existing setup/usage context
+- `js/game.js`
+- `js/dashboard/component.js`
+- `js/dashboard/logic.js`
+- `js/dashboard/gameTile.js`
+- `js/storage/score.js`
+- game domain modules in `js/anomaly/`, `js/racing/`, `js/clicker/`, `js/color-match/`
+
+### Verification
+1. `node --test tests/*.mjs`
+   - Result: PASS (`7` passed, `0` failed)
+
+### Acceptance Mapping
+1. `README.md` contains a `Technical Overview` section.
+   - PASS
+2. Section includes architecture details and component descriptions.
+   - PASS
+3. Technology stack and data flow are described as requested.
+   - PASS
+4. Markdown formatting is clear and consistent.
+   - PASS
+5. `STATUS.md` includes an entry on the updated README.
+   - PASS

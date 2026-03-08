@@ -82,6 +82,51 @@ In the current implementation, dashboard tiles are composition cards (arrangemen
 - Board and tile pulse/highlight feedback appears after add/remove/move/score updates.
 - Tile cards show slot position, mode/difficulty metadata, and current score badge/value.
 
+## Technical Overview
+
+### Architecture
+
+The mini arcade is organized as a dashboard-first single-page web app with modular game domains and a shared persistence utility:
+
+- `Dashboard` layer: hosts the composition UI where users choose, add, remove, and reorder game tiles.
+- `Game Tiles` layer: each tile represents one game module and exposes metadata (name, mode, difficulty) plus live score state.
+- `Games` layer: individual game domains (`anomaly`, `racing`, `clicker`, `color-match`) each maintain their own game rules and scoring logic.
+- `Persistence Layer`: shared storage utilities in `js/storage/score.js` handle score read/write and normalization.
+
+### Main Components
+
+- `Dashboard`
+  - Bootstrapped from `js/game.js` through `createDashboardComponent(...)`.
+  - Uses dashboard state/logic functions for add/remove/reposition/move actions.
+  - Exposes `window.__MINI_ARCADE_DASHBOARD__` for snapshot and score update hooks.
+- `Game Tiles`
+  - Built by dashboard UI modules (`js/dashboard/component.js`, `js/dashboard/gameTile.js`).
+  - Render tile metadata, index position, and score values.
+  - Act as composition cards in this build (arrangement + status), not direct game launch routes.
+- `Games`
+  - Implemented as separated modules under `js/anomaly/`, `js/racing/`, `js/clicker/`, and `js/color-match/`.
+  - Encapsulate each game's state machine and scoring behavior.
+  - Feed score updates into dashboard-visible tile state via integration points.
+- `Persistence Layer`
+  - Shared helpers (`resolveStorage`, `readScore`, `writeScore`) abstract browser storage access.
+  - Uses browser `localStorage` when available, with safe fallbacks for non-browser/test contexts.
+  - Persists best score/best lap style values for cross-session continuity.
+
+### Technology Stack
+
+- `React` (project specification target for UI composition patterns).
+- `JavaScript` (ES modules are used across dashboard, games, and tests).
+- `Local Storage` (browser `localStorage` via shared persistence helpers).
+- `Node.js` test runner (`node --test`) for logic-level validation.
+
+### Data Flow
+
+1. App startup initializes dashboard state from catalog defaults and initial tile IDs.
+2. User interactions (add/remove/reorder) dispatch to dashboard logic functions that mutate canonical dashboard state.
+3. Dashboard component re-renders tile/order/status views from state snapshots.
+4. Game modules compute score changes during gameplay and emit updates to the dashboard API (`setGameScore`).
+5. Persistence helpers read/write score-related values through `localStorage` so best values survive reloads.
+
 ## Run Tests
 
 Run all logic tests with Node's built-in test runner:
