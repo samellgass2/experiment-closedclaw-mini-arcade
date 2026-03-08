@@ -1,18 +1,21 @@
-# Task Report: TASK_ID 160 (RUN_ID 255)
+# Task Report: TASK_ID 185 (RUN_ID 338)
 
 ## Summary
-Updated `STATUS.md` to document the latest dashboard user interface enhancements delivered in Tasks `157`-`159`, including layout refinements, readability improvements, and interaction feedback cues.
+Created a new root `README.md` with setup instructions, run/test usage guidance, and a technical overview for the current static mini-arcade project. Updated `STATUS.md` to document the README work and validation evidence.
 
 ## Changes
-- Updated `STATUS.md`:
-  - added `## Task 160 Update (RUN_ID 255)` section
-  - documented dashboard UI layout and drag/drop insertion-slot improvements from Task `157`
-  - documented tile game-name/score visibility and responsive readability improvements from Task `158`
-  - documented interaction feedback stream, pulse/highlight cues, and reduced-motion behavior from Task `159`
-  - included updated file list, verification results, and acceptance mapping
+- Added/updated `README.md` with:
+  - project overview
+  - requirements (`Node.js 18+`, browser, optional Python 3)
+  - setup flow with explicit `main` branch checkout
+  - app start command: `python3 -m http.server 8000`
+  - test command: `node --test tests/*.mjs`
+  - project structure and notes on absence of `package.json`
+- Updated `STATUS.md` with `Task 185 Update (RUN_ID 338)` including acceptance mapping.
 
 ## Verification
 Executed:
+- `ls -la package.json` (confirmed missing; no npm scripts available)
 - `node --test tests/*.mjs`
 
 Results:
@@ -25,7 +28,8 @@ Results:
 - PASS: `tests/storage.score.test.mjs`
 
 ## Acceptance Coverage
-- `STATUS.md` reflects latest UI enhancements: PASS
-  - new Task 160 section captures the full dashboard UI enhancement set from Tasks `157`-`159`
-- `STATUS.md` formatting is correct: PASS
-  - content follows existing status structure with implementation summary, verification, and acceptance mapping
+1. `README.md` exists in root: PASS
+2. `README.md` contains `Setup` with install/start guidance: PASS
+3. Commands align with inferable/documented repo workflow: PASS
+4. Markdown formatting is readable and conventional: PASS
+5. `STATUS.md` references README creation: PASS

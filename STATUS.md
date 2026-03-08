@@ -1242,3 +1242,39 @@ Goal: Implement basic styling and layout adjustments for the dashboard to improv
 - Interaction clarity improved via consistent, immediate action feedback patterns.
 
 Overall Verdict: PASS
+
+## Task 185 Update (RUN_ID 338)
+Created a root `README.md` with setup, usage, and technical overview content based on commands and structure that are currently present in this repository.
+
+### Documentation Added
+- `README.md` now includes:
+  - project overview and static-architecture summary
+  - environment requirements (`Node.js 18+`, modern browser, optional Python 3)
+  - setup steps with explicit `main` branch reference
+  - local run command for static hosting (`python3 -m http.server 8000`)
+  - test command (`node --test tests/*.mjs`)
+  - project structure guide and notes about missing npm manifest/scripts
+
+### Evidence Used For Setup/Usage Commands
+- No `package.json` exists at repo root, so npm scripts are not available.
+- Existing repo documentation and prior verification records use:
+  - `python3 -m http.server 8000` for local serving
+  - `node --test tests/*.mjs` for test execution
+
+### Verification
+1. `ls -la package.json`
+   - Result: expected missing file (`No such file or directory`)
+2. `node --test tests/*.mjs`
+   - Result: PASS (`7` passed, `0` failed)
+
+### Acceptance Mapping
+1. `README.md` exists in repository root.
+   - PASS
+2. README contains a `Setup` section with installation/start guidance.
+   - PASS
+3. Setup/start commands align with commands inferable from repository records and executable files.
+   - PASS
+4. README is valid readable markdown with headers and lists.
+   - PASS
+5. README creation is reflected in `STATUS.md`.
+   - PASS
