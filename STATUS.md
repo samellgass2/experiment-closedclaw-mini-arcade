@@ -1242,3 +1242,168 @@ Goal: Implement basic styling and layout adjustments for the dashboard to improv
 - Interaction clarity improved via consistent, immediate action feedback patterns.
 
 Overall Verdict: PASS
+
+## Task 185 Update (RUN_ID 338)
+Created a root `README.md` with setup, usage, and technical overview content based on commands and structure that are currently present in this repository.
+
+### Documentation Added
+- `README.md` now includes:
+  - project overview and static-architecture summary
+  - environment requirements (`Node.js 18+`, modern browser, optional Python 3)
+  - setup steps with explicit `main` branch reference
+  - local run command for static hosting (`python3 -m http.server 8000`)
+  - test command (`node --test tests/*.mjs`)
+  - project structure guide and notes about missing npm manifest/scripts
+
+### Evidence Used For Setup/Usage Commands
+- No `package.json` exists at repo root, so npm scripts are not available.
+- Existing repo documentation and prior verification records use:
+  - `python3 -m http.server 8000` for local serving
+  - `node --test tests/*.mjs` for test execution
+
+### Verification
+1. `ls -la package.json`
+   - Result: expected missing file (`No such file or directory`)
+2. `node --test tests/*.mjs`
+   - Result: PASS (`7` passed, `0` failed)
+
+### Acceptance Mapping
+1. `README.md` exists in repository root.
+   - PASS
+2. README contains a `Setup` section with installation/start guidance.
+   - PASS
+3. Setup/start commands align with commands inferable from repository records and executable files.
+   - PASS
+4. README is valid readable markdown with headers and lists.
+   - PASS
+5. README creation is reflected in `STATUS.md`.
+   - PASS
+
+## Task 186 Update (RUN_ID 340)
+Extended `README.md` with a detailed dashboard Usage Guide aligned to implemented dashboard component behavior and prior analyst/status documentation.
+
+### Documentation Added
+- Added a new `Usage Guide` section in `README.md` describing:
+  - how to add tiles from `Catalog Controls`
+  - how to remove tiles from the `Active Board`
+  - how to rearrange tiles via `Move Left`/`Move Right` and drag-drop insertion slots
+  - board constraints (duplicate prevention, max tile capacity, disabled add controls when full)
+  - dashboard interaction feedback (`dashboardStatus`, `Recent Actions`, tile/board highlight pulses)
+- Added a launch behavior note clarifying current implementation status:
+  - tiles are composition/status cards in this build and do not yet provide direct play-route navigation buttons
+  - score updates can be driven through `window.__MINI_ARCADE_DASHBOARD__.setGameScore(tileId, score)`
+
+### Evidence Used
+- `js/dashboard/component.js`
+- `js/dashboard/logic.js`
+- `js/dashboard/gameTile.js`
+- Existing dashboard implementation summaries in prior `STATUS.md` task entries (`Task 141`, `Task 160`)
+
+### Verification
+1. `node --test tests/*.mjs`
+   - Result: PASS (`7` passed, `0` failed)
+
+### Acceptance Mapping
+1. `README.md` contains a `Usage Guide` section.
+   - PASS
+2. Usage Guide explains interaction with the dashboard component.
+   - PASS
+3. Usage Guide explains launch behavior and relevant UI features.
+   - PASS (documents current launch limitation and score-update hook accurately)
+4. Instructions are consistent with implemented project behavior and analyst/status records.
+   - PASS
+5. README formatting remains consistent and readable.
+   - PASS
+6. `STATUS.md` reflects the update.
+   - PASS
+
+## Task 187 Update (RUN_ID 342)
+Added a dedicated `Technical Overview` section to `README.md` describing architecture, component responsibilities, stack choices, and runtime data flow for the mini-arcade project.
+
+### Documentation Added
+- Added `## Technical Overview` in `README.md` with:
+  - architecture breakdown across `Dashboard`, `Game Tiles`, `Games`, and `Persistence Layer`
+  - main component responsibilities mapped to current module locations
+  - technology stack summary (`React`, `JavaScript`, `localStorage`, Node test runner)
+  - end-to-end data flow from dashboard initialization through score persistence
+
+### Evidence Used
+- `README.md` existing setup/usage context
+- `js/game.js`
+- `js/dashboard/component.js`
+- `js/dashboard/logic.js`
+- `js/dashboard/gameTile.js`
+- `js/storage/score.js`
+- game domain modules in `js/anomaly/`, `js/racing/`, `js/clicker/`, `js/color-match/`
+
+### Verification
+1. `node --test tests/*.mjs`
+   - Result: PASS (`7` passed, `0` failed)
+
+### Acceptance Mapping
+1. `README.md` contains a `Technical Overview` section.
+   - PASS
+2. Section includes architecture details and component descriptions.
+   - PASS
+3. Technology stack and data flow are described as requested.
+   - PASS
+4. Markdown formatting is clear and consistent.
+   - PASS
+5. `STATUS.md` includes an entry on the updated README.
+   - PASS
+
+## Tester Report (Workflow #21 - Create README with Setup, Usage Guide, and Technical Overview)
+Date: 2026-03-08
+Branch: `workflow/21/dev`
+Role: TESTER
+
+### Tests Run and Results
+1. `node --version`
+   - Result: `v22.22.1`
+2. `npm --version`
+   - Result: `10.9.4`
+3. `node --test tests/*.mjs`
+   - Result: PASS (`7` passed, `0` failed)
+
+Repository test-discovery notes:
+- No `package.json` found at repo root or within first three directory levels.
+- No `Makefile`, `pytest.ini`, `pyproject.toml`, or JS test-runner config files were found.
+- Full available automated suite in this branch is the Node built-in runner over `tests/*.mjs`.
+
+### Per-Task Acceptance Verdict
+1. Task #185: Create README with setup instructions
+   - Verdict: PASS
+   - Validation:
+     - `README.md` exists at repository root.
+     - Contains `## Setup` section with setup and start instructions.
+     - Commands are aligned with project reality/documented workflow (`python3 -m http.server 8000`, `node --test tests/*.mjs`; no npm scripts available due missing `package.json`).
+     - Markdown formatting is readable and consistent.
+     - `STATUS.md` contains Task #185 update entry.
+
+2. Task #186: Add usage guide to README.md
+   - Verdict: PASS
+   - Validation:
+     - `README.md` contains `## Usage Guide`.
+     - Section explains dashboard interaction: add/remove/reorder tiles and board constraints.
+     - Launch behavior and UI feedback features are documented, including current non-direct-play tile behavior and dashboard status/action feedback.
+     - Content is consistent with documented project behavior.
+     - `STATUS.md` contains Task #186 update entry.
+
+3. Task #187: Add technical overview to README.md
+   - Verdict: PASS
+   - Validation:
+     - `README.md` contains `## Technical Overview`.
+     - Includes architecture and component responsibilities (`Dashboard`, `Game Tiles`, `Games`, `Persistence Layer`).
+     - Technology stack and data flow are described per task scope.
+     - Formatting is clear and consistent.
+     - `STATUS.md` contains Task #187 update entry.
+
+### Bugs Filed
+- None.
+
+### Integration and Regression Check
+- README sections (Setup, Usage Guide, Technical Overview) are cohesive and non-conflicting.
+- No integration regressions observed from documentation updates.
+- Automated logic test suite remains fully passing.
+
+Overall Verdict: CLEAN
