@@ -1,45 +1,26 @@
-# Task Report: TASK_ID 385 (RUN_ID 679)
+# Task Report: TASK_ID=381 RUN_ID=682
 
 ## Summary
-Updated project documentation to reflect the shared game lifecycle/loop manager and its navigation integration, with explicit coverage of wired game modules and current Flappy limitations.
+Implemented and validated single-active game loop lifecycle enforcement across routed games (Flappy, Anomaly, Clicker, Color Match, Racing).
 
 ## What Changed
-- Updated `STATUS.md` lifecycle documentation to clearly describe `js/gameLoopManager.js`:
-  - `startGameLoop(gameId, startFn)`
-  - `stopActiveGameLoop(reason?)`
-  - `getActiveGameLoop()`
-- Documented the single-active-loop guarantee:
-  - Starting a new game loop always stops any currently active session first.
-  - Dashboard navigation and game unmount paths stop active loops via the manager.
-  - The manager scope owns and tears down RAF handles, timers, listeners, and runtime cleanup callbacks.
-- Expanded `STATUS.md` game wiring notes to explicitly list:
-  - Flappy
-  - Anomaly
-  - Clicker
-  - Color Match
-  - Racing
-- Added explicit caveat for Flappy:
-  - Runtime is registered and manager-aware, but not currently reachable through dashboard catalog/routes.
-- Added concise guidance in `STATUS.md` for integrating future games with the lifecycle manager:
-  - add catalog entry
-  - register runtime
-  - use scope-managed resources
-  - return runtime teardown
+- Hardened shared lifecycle controller in `js/gameLoopManager.js`:
+  - preserved `startGameLoop(gameId, startFn)` and `stopActiveGameLoop(reason)` API,
+  - added per-session IDs and managed-resource diagnostics,
+  - added stopped-scope defensive guards for late `requestFrame`/`setInterval`/`setTimeout`/`listen`/`registerCleanup` calls,
+  - improved development logging for start/stop and forced switch teardown.
+- Updated route lifecycle checks in `js/game.js`:
+  - added development logging around game navigation,
+  - added dashboard-route warning if an active loop remains after teardown.
+- Added lifecycle regression tests in `tests/game-loop-manager.test.mjs`:
+  - stop cancels RAF/interval/timeout,
+  - switching games stops prior loop before next starts,
+  - stopped scope rejects late registrations.
+- Updated `STATUS.md` with Task 381 implementation details, acceptance mapping, and known limitations.
 
-## Design Notes / Caveats
-- This task intentionally made documentation-only updates (no runtime behavior changes).
-- Navigation lifecycle behavior described in docs matches existing implementation in `js/game.js` and `js/gameRuntimes.js`.
+## Validation
+- Ran `node --test tests/*.mjs`
+- Result: PASS (`9` passed, `0` failed)
 
-## Verification
-Executed:
-- `node --test tests/*.mjs`
-
-Result:
-- PASS: all test files passed.
-
-## Acceptance Mapping
-1. `STATUS.md` lifecycle section includes manager module and exported APIs, with single-loop guarantee: PASS.
-2. `STATUS.md` lists Flappy, Anomaly, Clicker, Color Match, and Racing lifecycle wiring with limitation notes: PASS.
-3. `STATUS.md` explains how to integrate future games with lifecycle manager: PASS.
-4. `TASK_REPORT.md` summarizes implementation/design caveats and confirms navigation start/stop behavior through manager: PASS.
-5. Diff is limited to documentation files only and remains within scope: PASS.
+## Commit
+- `99abc98` `task/381: harden single active game loop lifecycle`
