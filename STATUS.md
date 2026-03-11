@@ -8,6 +8,46 @@
 ## Task 380 Update (RUN_ID 669)
 Formalized dashboard/game navigation with a dedicated hash-based router so view switching is centralized and predictable.
 
+## Task 381 Update (RUN_ID 670)
+Implemented a shared game loop lifecycle manager so only one game runtime loop/timer set can be active at a time across router transitions.
+
+### Lifecycle Manager
+- Added `js/gameLoopManager.js` with:
+  - `startGameLoop(gameId, startFn)`
+  - `stopActiveGameLoop(reason?)`
+  - `getActiveGameLoop()`
+- Manager-owned scope tracks and tears down:
+  - `requestAnimationFrame` registrations
+  - `setInterval`/`setTimeout` registrations
+  - event listeners and custom cleanup callbacks
+- `startGameLoop` enforces singleton behavior by always stopping any previously active session before starting a new one.
+- Development-mode logging was added for forced pre-stop and cleanup errors so overlapping loops can be detected quickly in console output.
+
+### Games Wired Into Lifecycle
+- Added `js/gameRuntimes.js` and mounted through the game view host:
+  - `anomaly` runtime uses `requestAnimationFrame` rendering + managed timer interval.
+  - `racing` runtime uses `requestAnimationFrame` for simulation/render + managed keyboard listeners.
+  - `clicker` runtime uses managed `setInterval` ticks.
+  - `color-match` runtime uses managed interval-driven UI heartbeat and round controls.
+- Game route transitions now route through lifecycle controls in `js/game.js`:
+  - Entering a game starts that game loop scope.
+  - Navigating between games tears down the old scope before starting the new one.
+  - Navigating back to dashboard unmounts runtime and stops any active scope.
+
+### Integration Files Updated
+- `js/game.js`: route-driven start/stop integration with lifecycle manager.
+- `js/gameView.js`: runtime mount/unmount hooks added; unmount occurs before each re-render.
+- `css/styles.css`: runtime host and HUD styles for mounted game modules.
+- `js/gameRuntimes.js`: per-game runtime mounting logic and teardown contracts.
+
+### Known Exceptions / Limitations
+- Flappy runtime code from earlier workflow history is not present in the current `js/` module graph and not listed in dashboard catalog routes.
+- A `flappy` runtime placeholder is registered in `js/gameRuntimes.js`, but it is not currently reachable through `DASHBOARD_DEFAULT_CATALOG`.
+- To add a new game in future work:
+  1. Add the game metadata entry to dashboard catalog.
+  2. Add a runtime mount function in `js/gameRuntimes.js`.
+  3. Ensure runtime uses the lifecycle scope APIs for all RAF/timer/listener resources.
+
 ### Navigation Approach
 - Added a small router module at `js/router.js` with explicit public functions:
   - `navigateToDashboard()`

@@ -16,27 +16,34 @@ function ensureRoot(root) {
   return root;
 }
 
-function buildGameContent(game) {
-  const fragment = document.createDocumentFragment();
+function buildFallbackContent(content, gameId) {
+  const fallbackTitle = createNode("h1", "game-view-title", "Game Not Found");
+  const fallbackSummary = createNode(
+    "p",
+    "game-view-summary",
+    `The requested game '${gameId}' is unavailable. Return to the dashboard and choose another tile.`
+  );
+  content.append(fallbackTitle, fallbackSummary);
+}
+
+function buildGameHeader(content, game) {
+  const heading = createNode("div", "game-runtime-header");
 
   const title = createNode("h1", "game-view-title", game.name);
   const summary = createNode("p", "game-view-summary", game.description);
-  const panel = createNode("section", "game-view-panel");
-  panel.setAttribute("aria-label", `${game.name} details`);
-  panel.innerHTML = `
-    <p><strong>Mode:</strong> ${game.mode}</p>
-    <p><strong>Difficulty:</strong> ${game.difficulty}</p>
-    <p>This workspace currently uses a shared game-view host. Hook game-specific runtime here in follow-up workflows.</p>
-  `;
 
-  fragment.append(title, summary, panel);
-  return fragment;
+  const meta = createNode("p", "game-view-meta");
+  meta.textContent = `${game.mode} | ${game.difficulty}`;
+
+  heading.append(title, summary, meta);
+  content.append(heading);
 }
 
 export function createGameView(options = {}) {
   const root = ensureRoot(options.root);
   const onBack = typeof options.onBack === "function" ? options.onBack : () => {};
   const resolveGame = typeof options.resolveGame === "function" ? options.resolveGame : () => null;
+  const mountGame = typeof options.mountGame === "function" ? options.mountGame : () => () => {};
 
   root.innerHTML = "";
 
@@ -49,24 +56,41 @@ export function createGameView(options = {}) {
   header.append(backButton);
   root.append(header, content);
 
+  let activeGameId = null;
+  let activeTeardown = null;
+
+  function unmountActiveGame() {
+    if (typeof activeTeardown === "function") {
+      activeTeardown();
+    }
+    activeTeardown = null;
+    activeGameId = null;
+  }
+
   function renderGame(gameId) {
     const game = resolveGame(gameId);
+    unmountActiveGame();
     content.innerHTML = "";
 
     if (!game) {
-      const fallbackTitle = createNode("h1", "game-view-title", "Game Not Found");
-      const fallbackSummary = createNode(
-        "p",
-        "game-view-summary",
-        "The requested game was unavailable. Return to the dashboard and choose another tile."
-      );
-      content.append(fallbackTitle, fallbackSummary);
+      buildFallbackContent(content, gameId);
       return false;
     }
 
-    content.append(buildGameContent(game));
+    buildGameHeader(content, game);
+
+    const runtimeRoot = createNode("section", "game-runtime-root");
+    runtimeRoot.setAttribute("aria-label", `${game.name} runtime`);
+    content.append(runtimeRoot);
+
+    activeGameId = game.id;
+    activeTeardown = mountGame({ game, root: runtimeRoot });
+
     return true;
   }
 
-  return { renderGame };
+  return {
+    renderGame,
+    unmountActiveGame
+  };
 }

@@ -1,4 +1,6 @@
 import { createDashboardComponent, DASHBOARD_DEFAULT_CATALOG } from "./dashboard/index.js";
+import { mountRuntimeForGame } from "./gameRuntimes.js";
+import { startGameLoop, stopActiveGameLoop } from "./gameLoopManager.js";
 import { createGameView } from "./gameView.js";
 import { createRouter, navigateToDashboard, navigateToGame } from "./router.js";
 
@@ -28,7 +30,21 @@ function initializeDashboard() {
   const gameHost = createGameView({
     root: gameRoot,
     onBack: () => navigateToDashboard(),
-    resolveGame: (gameId) => catalogById.get(gameId) ?? null
+    resolveGame: (gameId) => catalogById.get(gameId) ?? null,
+    mountGame: ({ game, root }) => {
+      startGameLoop(game.id, (scope) =>
+        mountRuntimeForGame({
+          game,
+          root,
+          scope,
+          onScoreChange: (score) => component.setGameScore(game.id, score)
+        })
+      );
+
+      return () => {
+        stopActiveGameLoop(`unmount-${game.id}`);
+      };
+    }
   });
 
   const router = createRouter({
@@ -36,11 +52,15 @@ function initializeDashboard() {
     gameView,
     resolveGame: (gameId) => catalogById.get(gameId) ?? null,
     onRouteChange: (route) => {
-      if (route.view === "game") {
-        const rendered = gameHost.renderGame(route.gameId);
-        if (!rendered) {
-          navigateToDashboard();
-        }
+      if (route.view === "dashboard") {
+        gameHost.unmountActiveGame();
+        stopActiveGameLoop("navigated-dashboard");
+        return;
+      }
+
+      const rendered = gameHost.renderGame(route.gameId);
+      if (!rendered) {
+        navigateToDashboard();
       }
     }
   });

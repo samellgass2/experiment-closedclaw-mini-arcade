@@ -1,35 +1,46 @@
-# Task Report: TASK_ID 187 (RUN_ID 342)
+# Task Report: TASK_ID 381 (RUN_ID 670)
 
 ## Summary
-Added a new `Technical Overview` section to `README.md` covering project architecture, core components, technology stack, and data flow for the experiment mini arcade. Updated `STATUS.md` with a matching Task 187 entry documenting the README update and acceptance coverage.
+Implemented a shared game loop lifecycle controller and wired router-driven game mount/unmount so only one game runtime loop/timer set is active at a time.
 
-## Changes
-- Updated `README.md`:
-  - Added `## Technical Overview`
-  - Documented architecture layers: `Dashboard`, `Game Tiles`, `Games`, `Persistence Layer`
-  - Described main component responsibilities and relevant module locations
-  - Added technology stack details (`React`, `JavaScript`, `localStorage`, Node test runner)
-  - Added explicit runtime data flow from dashboard initialization to score persistence
+## What Changed
+- Added `js/gameLoopManager.js`:
+  - Exports `startGameLoop(gameId, startFn)` and `stopActiveGameLoop(reason?)`.
+  - Tracks/cancels managed `requestAnimationFrame`, `setInterval`, `setTimeout`, event listeners, and custom cleanups.
+  - Enforces singleton active runtime by forcing teardown before new game startup.
+  - Includes development logging for overlap detection and cleanup failures.
+- Added `js/gameRuntimes.js`:
+  - Runtime mount implementations for `anomaly`, `racing`, `clicker`, and `color-match`.
+  - Each runtime uses lifecycle scope APIs for timers/RAF/listeners so teardown is centralized.
+  - Includes `flappy` placeholder runtime registration (not currently catalog-routable).
+- Updated `js/gameView.js`:
+  - Added explicit runtime mount/unmount lifecycle via `mountGame(...)` + `unmountActiveGame()`.
+  - Ensures unmount executes before any route re-render.
+- Updated `js/game.js`:
+  - Integrates lifecycle manager into route transitions.
+  - Entering a game starts scoped runtime; leaving/switching stops active runtime.
+  - Dashboard navigation explicitly halts all active loops.
+- Updated `css/styles.css`:
+  - Added runtime host/HUD styling for mounted game UIs.
 - Updated `STATUS.md`:
-  - Added `Task 187 Update (RUN_ID 342)`
-  - Included evidence, verification, and acceptance mapping for the technical overview addition
+  - Added Task 381 section documenting manager design, integrated games, and known limitations.
 
 ## Verification
 Executed:
+- `node --check js/game.js`
+- `node --check js/gameRuntimes.js`
 - `node --test tests/*.mjs`
 
 Result:
-- PASS: `tests/anomaly.logic.test.mjs`
-- PASS: `tests/clicker.logic.test.mjs`
-- PASS: `tests/color-match.logic.test.mjs`
-- PASS: `tests/dashboard.logic.test.mjs`
-- PASS: `tests/racing.controls.test.mjs`
-- PASS: `tests/racing.logic.test.mjs`
-- PASS: `tests/storage.score.test.mjs`
+- PASS: all checks/tests succeeded (7/7 test files passing).
 
-## Acceptance Coverage
-1. `README.md` contains a `Technical Overview` section: PASS
-2. Section includes architecture details and component descriptions: PASS
-3. Technology stack and data flow are described as requested: PASS
-4. Markdown formatting is clear and consistent: PASS
-5. `STATUS.md` includes an entry on the updated README: PASS
+## Acceptance Mapping
+1. Dedicated lifecycle manager module exists and exports start/stop APIs: PASS (`js/gameLoopManager.js`).
+2. Entering a game activates only that game loop/timers: PASS (manager force-stops prior runtime before start).
+3. Direct game-to-game navigation stops prior runtime before next starts: PASS (`renderGame` unmount + manager singleton enforcement).
+4. Navigating to dashboard halts all loops/timers: PASS (`onRouteChange` dashboard branch calls unmount + `stopActiveGameLoop`).
+5. Status document records updates and integration guidance: PASS (`STATUS.md` Task 381 section).
+
+## Known Limitations
+- Flappy game implementation from earlier workflow history is not present in active `js/` game module graph and not exposed in dashboard catalog routing.
+- A `flappy` runtime placeholder is registered for forward integration, and this limitation is documented in `STATUS.md`.
