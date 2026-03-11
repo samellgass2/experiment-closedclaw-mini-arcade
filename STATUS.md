@@ -1535,3 +1535,48 @@ Repository test-discovery notes:
 - Automated logic test suite remains fully passing.
 
 Overall Verdict: CLEAN
+
+## Task 381 Update (RUN_ID 682)
+Implemented and validated a shared single-active-game lifecycle across all routed game runtimes so only one loop/timer set can run at any time.
+
+### Lifecycle Audit Summary
+- `Flappy` (`js/gameRuntimes.js`): uses managed `requestAnimationFrame` via `scope.requestFrame(...)`.
+- `Anomaly` (`js/gameRuntimes.js`): uses managed `requestAnimationFrame` plus managed `setInterval` tick loop.
+- `Clicker` (`js/gameRuntimes.js`): uses managed `setInterval` state tick loop.
+- `Color Match` (`js/gameRuntimes.js`): uses managed `setInterval` UI/session refresh loop.
+- `Racing` (`js/gameRuntimes.js`): uses managed `requestAnimationFrame` plus managed input listener teardown.
+
+### Changes Made
+- Hardened `js/gameLoopManager.js`:
+  - Added per-session ids and richer dev logging on start/stop.
+  - Added managed-resource snapshots (`rafs`, `intervals`, `timeouts`, `cleanups`) to active-loop diagnostics.
+  - Added defensive stopped-scope guards so late calls to `requestFrame`, `setInterval`, `setTimeout`, `listen`, or `registerCleanup` are rejected and logged in dev mode.
+  - Kept `startGameLoop(gameId, startFn)` and `stopActiveGameLoop(reason)` semantics while enforcing forced stop on game switch.
+- Updated `js/game.js` route handling:
+  - Added development lifecycle logging for game navigation.
+  - Added a dashboard-route assertion warning when an active loop remains after unmount/stop.
+- Added lifecycle tests in `tests/game-loop-manager.test.mjs`:
+  - verifies stop cancels all managed RAF/interval/timeout resources,
+  - verifies switching games stops prior loop before new loop activation,
+  - verifies stopped scopes reject late registrations.
+
+### Verification
+- Ran: `node --test tests/*.mjs`
+- Result: PASS (`9` passed, `0` failed)
+
+### Acceptance Mapping
+1. Dedicated lifecycle manager module exporting start/stop semantics.
+   - PASS (`js/gameLoopManager.js`)
+2. Entering any routed game activates only that game loop/timers.
+   - PASS (all runtime timers/RAF are scope-managed; manager force-stops prior active session)
+3. Direct game-to-game navigation stops prior loop before next starts.
+   - PASS (`startGameLoop` forced-stop + `gameView` unmount path + validated in `tests/game-loop-manager.test.mjs`)
+4. Returning to dashboard halts all loops/timers.
+   - PASS (`gameHost.unmountActiveGame()` + `stopActiveGameLoop("navigated-dashboard")` + dashboard lingering-loop warning in dev)
+5. STATUS updated with integration details and extension guidance.
+   - PASS (this section)
+
+### Known Limitations / Exceptions
+- The single-active guarantee applies to loops/timers registered through the lifecycle `scope` API. Any future runtime that directly calls global `window.setInterval`/`window.requestAnimationFrame` outside `scope` can bypass enforcement.
+- Current dev assertions are console-based warnings/logs (non-throwing) to avoid breaking local gameplay flows while still surfacing lifecycle misuse.
+- To add a new game safely, register its runtime in `runtimeByGameId` (`js/gameRuntimes.js`) and use only `scope` methods (`requestFrame`, `setInterval`, `setTimeout`, `listen`, `registerCleanup`) for all long-lived callbacks/resources.

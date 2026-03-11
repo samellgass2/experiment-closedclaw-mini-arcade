@@ -6,6 +6,7 @@ const DEV_MODE =
     window.location?.protocol === "file:");
 
 let activeSession = null;
+let sessionCounter = 0;
 
 function devLog(level, message, details) {
   if (!DEV_MODE) {
@@ -27,9 +28,32 @@ function createSessionScope(gameId) {
   const timeoutIds = new Set();
   let stopped = false;
 
+  function summarizeResources() {
+    return {
+      cleanups: cleanups.length,
+      rafs: rafIds.size,
+      intervals: intervalIds.size,
+      timeouts: timeoutIds.size
+    };
+  }
+
+  function warnStoppedScope(apiName) {
+    devLog("warn", `Ignoring ${apiName} for stopped scope ${gameId}.`, summarizeResources());
+  }
+
   function registerCleanup(teardown, label = "cleanup") {
     if (typeof teardown !== "function") {
       return () => {};
+    }
+
+    if (stopped) {
+      warnStoppedScope(`registerCleanup(${label})`);
+      try {
+        teardown();
+      } catch (error) {
+        devLog("warn", `Late cleanup '${label}' failed while scope was already stopped for ${gameId}.`, error);
+      }
+      return teardown;
     }
 
     cleanups.push({ teardown, label });
@@ -39,6 +63,10 @@ function createSessionScope(gameId) {
   function requestFrame(callback) {
     if (typeof callback !== "function") {
       throw new Error("requestFrame requires a callback.");
+    }
+    if (stopped) {
+      warnStoppedScope("requestFrame");
+      return null;
     }
 
     const rafId = window.requestAnimationFrame((timestamp) => {
@@ -63,6 +91,11 @@ function createSessionScope(gameId) {
   }
 
   function setManagedInterval(callback, ms) {
+    if (stopped) {
+      warnStoppedScope("setInterval");
+      return null;
+    }
+
     const intervalId = window.setInterval(() => {
       if (stopped) {
         return;
@@ -84,6 +117,11 @@ function createSessionScope(gameId) {
   }
 
   function setManagedTimeout(callback, ms) {
+    if (stopped) {
+      warnStoppedScope("setTimeout");
+      return null;
+    }
+
     const timeoutId = window.setTimeout(() => {
       timeoutIds.delete(timeoutId);
       if (stopped) {
@@ -108,6 +146,10 @@ function createSessionScope(gameId) {
   function listen(target, type, handler, options) {
     if (!target || typeof target.addEventListener !== "function") {
       throw new Error(`Unable to bind event listener for ${type}.`);
+    }
+    if (stopped) {
+      warnStoppedScope(`listen(${type})`);
+      return;
     }
 
     target.addEventListener(type, handler, options);
@@ -159,6 +201,7 @@ function createSessionScope(gameId) {
     clearTimeout: clearManagedTimeout,
     listen,
     isStopped: () => stopped,
+    getDebugState: summarizeResources,
     stopScope
   };
 }
@@ -169,8 +212,10 @@ export function getActiveGameLoop() {
   }
 
   return {
+    sessionId: activeSession.sessionId,
     gameId: activeSession.gameId,
-    startedAtMs: activeSession.startedAtMs
+    startedAtMs: activeSession.startedAtMs,
+    managedResources: activeSession.scope.getDebugState()
   };
 }
 
@@ -191,7 +236,10 @@ export function stopActiveGameLoop(reason = "manual-stop") {
   }
 
   sessionToStop.scope.stopScope(reason);
-  devLog("info", `Stopped active game loop for ${sessionToStop.gameId}.`);
+  devLog("info", `Stopped active game loop for ${sessionToStop.gameId}.`, {
+    sessionId: sessionToStop.sessionId,
+    reason
+  });
   return true;
 }
 
@@ -226,12 +274,16 @@ export function startGameLoop(gameId, startFn) {
   }
 
   activeSession = {
+    sessionId: ++sessionCounter,
     gameId: normalizedGameId,
     scope,
     teardown,
     startedAtMs: Date.now()
   };
 
-  devLog("info", `Started game loop for ${normalizedGameId}.`);
+  devLog("info", `Started game loop for ${normalizedGameId}.`, {
+    sessionId: activeSession.sessionId,
+    managedResources: scope.getDebugState()
+  });
   return getActiveGameLoop();
 }
