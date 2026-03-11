@@ -1,9 +1,213 @@
 # STATUS
 
+## Tester Report (Workflow #38, 2026-03-11 UTC)
+- Branch tested: `workflow/38/dev`
+- Role: `TESTER` (verification only, no source code changes)
+
+### Tests Run
+- `node --test tests/*.mjs`
+  - Result: PASS (`9 passed, 0 failed`)
+- Additional exploratory check attempts:
+  - Tried Playwright CLI-driven E2E execution for browser validation; environment lacked Playwright test module wiring (`@playwright/test` / `playwright/test` not available in this repo setup), so automated browser script execution could not be completed in this run.
+
+### Acceptance Verdict by Task
+- Task `#380` (Navigation router): PASS
+  - `js/router.js` exports `navigateToDashboard()` and `navigateToGame(gameId)`.
+  - Dashboard tile play actions route through centralized navigation path in `js/game.js` + `js/dashboard/component.js`.
+  - View exclusivity enforced by router visibility toggling (`#dashboardView` vs `#gameView`).
+  - Hash reload behavior is coherent by route parsing and invalid-game fallback.
+  - STATUS documentation present.
+- Task `#381` (Single active game loop lifecycle): PASS
+  - `js/gameLoopManager.js` provides `startGameLoop`, `stopActiveGameLoop`, `getActiveGameLoop`.
+  - Start logic force-stops existing session before new game session.
+  - Dashboard route teardown calls stop lifecycle and unmount game host.
+  - Lifecycle integration present in `js/game.js` and runtime mounts in `js/gameRuntimes.js`.
+  - STATUS documentation present (including integration notes and limitations).
+- Task `#382` (Layout persistence robustness): PASS
+  - `js/persistence.js` exports `loadLayout`, `saveLayout`, `resetLayout` using localStorage key `miniArcade.dashboard.layout.v1`.
+  - Dashboard change callback persists tile order updates via `saveLayout` in `js/game.js`.
+  - Malformed JSON/schema mismatch/storage access failures gracefully fallback with warnings.
+  - STATUS documentation present for schema/key/behavior/extension guidance.
+- Task `#383` (End-to-end validation): PASS
+  - Existing STATUS section documents browser validation scenarios for navigation, lifecycle, and persistence.
+  - This tester run revalidated behavior with full logic suite pass and code-path audit against all acceptance criteria.
+
+### Bugs Filed
+- None.
+
+### Overall Verdict
+- `CLEAN`
+
 ## Project
 - Name: `experiment-mini-arcade`
 - Workflow: `Implement Top-Down Racing Game`
 - Snapshot Date (UTC): `2026-03-06`
+
+## Task 380 Update (RUN_ID 669)
+Formalized dashboard/game navigation with a dedicated hash-based router so view switching is centralized and predictable.
+
+## Task 381 Update (RUN_ID 670)
+Implemented a shared game loop lifecycle manager so only one game runtime loop/timer set can be active at a time across router transitions.
+
+## Task 382 Update (RUN_ID 671)
+Implemented robust dashboard tile layout persistence with versioned schema validation and guarded `localStorage` usage.
+
+## Task 383 Update (RUN_ID 683)
+Validated hardened dashboard routing, lifecycle management, and layout persistence together through a browser-driven end-to-end pass.
+
+### Validation Scope and Method
+- Served app as static site via:
+  - `python3 -m http.server 8000`
+- Ran automated browser workflow with Playwright (Chromium, headless) from a clean localStorage state.
+- Also ran logic regression tests:
+  - `node --test tests/*.mjs`
+
+### Acceptance Coverage
+- Fresh load / default layout:
+  - Cleared localStorage, loaded app, and confirmed dashboard opened with default tile order:
+    - `["racing", "clicker"]`
+  - Verified no uncaught page errors and no console `error` entries during startup.
+- Central router navigation from tiles:
+  - Added remaining catalog tiles (`color-match`, `anomaly`) and invoked `Play` on each tile.
+  - Confirmed hash routes transitioned through centralized router (`#game/<id>`), with exactly one visible game runtime host each time and no overlapping dashboard/game views.
+- Single active game loop lifecycle:
+  - On each game entry, inspected `getActiveGameLoop()` and confirmed active `gameId` matched the route.
+  - On each back navigation to dashboard (`#dashboard`), confirmed `getActiveGameLoop()` returned `null`.
+  - During direct game-to-game transition (`racing -> clicker`), confirmed session handoff:
+    - previous session stopped, new session id allocated, and only destination game loop remained active.
+- Layout reorder persistence and fallback safety:
+  - Reordered tiles (move-right on `racing` twice), reloaded page, and confirmed persisted order restored:
+    - `["clicker", "color-match", "racing", "anomaly"]`
+  - Corrupted storage key `miniArcade.dashboard.layout.v1` with malformed JSON and reloaded:
+    - clean fallback to default layout with no uncaught exceptions.
+  - Removed layout key and reloaded:
+    - clean fallback to default layout with no uncaught exceptions.
+
+### Observations / Defects
+- No blocking defects found in navigation, lifecycle teardown/startup, or layout persistence fallback handling for tested scenarios.
+- No JavaScript runtime errors observed during the validation pass.
+
+### Goal Status
+- Workflow goal **met** for TASK_ID `383` based on the above end-to-end validation results.
+
+### Layout Persistence Module
+- Added `js/persistence.js` with dedicated layout APIs:
+  - `loadLayout(options?)`
+  - `saveLayout(layoutModel, options?)`
+  - `resetLayout(options?)`
+- Storage key:
+  - `miniArcade.dashboard.layout.v1`
+- Layout schema:
+  - `version`: number (`1` currently)
+  - `tileOrder`: array of unique tile ids in render order, filtered to known catalog ids
+  - `updatedAt`: ISO timestamp written on save (reserved for future migration/debug use)
+
+### Runtime Behavior
+- First load (no key present):
+  - Dashboard starts from default order `["racing", "clicker"]`.
+- Subsequent loads (valid key present):
+  - Dashboard starts from persisted `tileOrder`.
+- Any accepted layout change (add, remove, move-left/right, drag-and-drop reorder):
+  - Dashboard snapshot changes trigger immediate `saveLayout(...)` from `js/game.js`.
+  - Saves are deduplicated by comparing last persisted order to current `snapshot.tileIds`.
+
+### Defensive Fallbacks
+- `localStorage` access is wrapped with `try/catch` at resolve/read/write/remove call sites.
+- If storage is unavailable (privacy mode restrictions, denied access, monkey patched exceptions):
+  - Dashboard continues with in-memory layout and logs a warning.
+- If stored layout payload is malformed JSON, invalid shape, or wrong schema version:
+  - App falls back to default tile ordering without throwing uncaught errors.
+
+### Extension Guidance
+- To extend layout metadata in a future schema:
+  1. Increment `LAYOUT_SCHEMA_VERSION` and key suffix (for example `.v2`) in `js/persistence.js`.
+  2. Add new fields alongside `tileOrder` (for example `tileMeta`, `widgetState`, `collapsedByTileId`).
+  3. Keep `tileOrder` normalization (dedupe/filter known ids) so incompatible or stale ids are safely ignored.
+  4. Optionally add migration logic in `loadLayout(...)` for controlled upgrades from previous schema versions.
+
+### Lifecycle Manager
+- Shared manager module: `js/gameLoopManager.js`
+- Exported APIs:
+  - `startGameLoop(gameId, startFn)`
+  - `stopActiveGameLoop(reason?)`
+  - `getActiveGameLoop()`
+- Singleton lifecycle guarantee:
+  - `startGameLoop(...)` force-stops any currently active loop/session before mounting the next runtime.
+  - `stopActiveGameLoop(...)` no-ops safely when nothing is active and returns whether a stop occurred.
+  - At most one active runtime scope can own RAF/timers/listeners at any point in time.
+- Manager-owned scope teardown covers:
+  - `requestAnimationFrame` registrations
+  - managed `setInterval`/`setTimeout` registrations
+  - event listeners and custom cleanup callbacks
+- Navigation integration point (`js/game.js`):
+  - entering a game route calls `startGameLoop(game.id, ...)`
+  - game unmount and dashboard navigation call `stopActiveGameLoop(...)`
+  - route switches therefore stop old loops before new loops start
+
+### Games Wired Into Lifecycle
+- Runtime registration source: `js/gameRuntimes.js` + route mount flow in `js/game.js`.
+- Current lifecycle wiring by game module:
+  - `Anomaly`: fully wired; managed RAF + managed interval/timer updates.
+  - `Racing`: fully wired; managed RAF + managed keyboard listeners.
+  - `Clicker`: fully wired; managed interval tick loop.
+  - `Color Match`: fully wired; managed interval heartbeat + event listeners.
+  - `Flappy`: runtime is registered (`flappy: mountFlappyRuntime`) and uses managed RAF, but not reachable from current dashboard catalog/routes.
+- Navigation behavior now consistently flows through manager controls:
+  - entering any routed game starts loop scope via `startGameLoop(...)`
+  - leaving game view stops scope via `stopActiveGameLoop(...)`
+  - switching game routes hard-stops prior scope before mounting next game
+
+### Integration Files Updated
+- `js/game.js`: route-driven start/stop integration with lifecycle manager.
+- `js/gameView.js`: runtime mount/unmount hooks added; unmount occurs before each re-render.
+- `css/styles.css`: runtime host and HUD styles for mounted game modules.
+- `js/gameRuntimes.js`: per-game runtime mounting logic and teardown contracts.
+
+### Known Exceptions / Limitations
+- Flappy runtime code from earlier workflow history is not present in the current `js/` module graph and not listed in dashboard catalog routes.
+- A `flappy` runtime placeholder is registered in `js/gameRuntimes.js`, but it is not currently reachable through `DASHBOARD_DEFAULT_CATALOG`.
+- To integrate any future game with lifecycle management:
+  1. Add game metadata to `DASHBOARD_DEFAULT_CATALOG` so routing can resolve it.
+  2. Register the game runtime in `js/gameRuntimes.js` (`runtimeByGameId[gameId] = mountFn`).
+  3. In `mountFn`, allocate all loop resources through the provided `scope` (`scope.requestFrame`, `scope.setInterval`, `scope.listen`, and cleanup hooks).
+  4. Return a runtime teardown function so `stopActiveGameLoop(...)` can perform full unmount cleanup on navigation.
+
+### Navigation Approach
+- Added a small router module at `js/router.js` with explicit public functions:
+  - `navigateToDashboard()`
+  - `navigateToGame(gameId)`
+- Routing uses URL hash state:
+  - Dashboard route: `#dashboard`
+  - Game route: `#game/<gameId>`
+- Router startup parses current hash and applies a safe fallback to dashboard when the game id is unknown, so reload on game hashes stays coherent.
+
+### Files Touched
+- `index.html`
+  - Introduced separate primary app view containers:
+    - `#dashboardView` with `#dashboardApp`
+    - `#gameView` with `#gameViewApp`
+- `css/styles.css`
+  - Added shared `.app-view` visibility rules and game-view styles.
+  - Added `Play` button styling for dashboard tiles.
+- `js/router.js` (new)
+  - Central route parsing + hash listeners + view visibility control.
+- `js/gameView.js` (new)
+  - Lightweight game-view host with back-to-dashboard action and per-game metadata rendering.
+- `js/game.js`
+  - Wired router startup and route-change handling.
+  - Wired dashboard tile play actions to `navigateToGame(gameId)`.
+  - Exposed router helpers on `window.__MINI_ARCADE_DASHBOARD__`.
+- `js/dashboard/component.js`
+  - Added tile click navigation callback path (`onPlayTile`).
+  - Added `play` button action handling in centralized tile event handling.
+- `js/dashboard/gameTile.js`
+  - Added `Play` control (`data-action="play"`) on each tile.
+
+### Tile Navigation Behavior Changes
+- Dashboard tiles now route through the central router instead of ad-hoc DOM toggles.
+- Clicking a tile card (excluding control buttons) opens that game route.
+- Clicking the tile `Play` button also opens that game route.
+- Back navigation from game view goes through `navigateToDashboard()` and restores dashboard visibility without overlapping views.
 
 ## Task 102 Update (RUN_ID 181)
 Implemented initial anomaly detection game structure by replacing Flappy-specific page wiring with a modular anomaly game scaffold.
@@ -1407,3 +1611,172 @@ Repository test-discovery notes:
 - Automated logic test suite remains fully passing.
 
 Overall Verdict: CLEAN
+
+## Task 381 Update (RUN_ID 682)
+Implemented and validated a shared single-active-game lifecycle across all routed game runtimes so only one loop/timer set can run at any time.
+
+### Lifecycle Audit Summary
+- `Flappy` (`js/gameRuntimes.js`): uses managed `requestAnimationFrame` via `scope.requestFrame(...)`.
+- `Anomaly` (`js/gameRuntimes.js`): uses managed `requestAnimationFrame` plus managed `setInterval` tick loop.
+- `Clicker` (`js/gameRuntimes.js`): uses managed `setInterval` state tick loop.
+- `Color Match` (`js/gameRuntimes.js`): uses managed `setInterval` UI/session refresh loop.
+- `Racing` (`js/gameRuntimes.js`): uses managed `requestAnimationFrame` plus managed input listener teardown.
+
+### Changes Made
+- Hardened `js/gameLoopManager.js`:
+  - Added per-session ids and richer dev logging on start/stop.
+  - Added managed-resource snapshots (`rafs`, `intervals`, `timeouts`, `cleanups`) to active-loop diagnostics.
+  - Added defensive stopped-scope guards so late calls to `requestFrame`, `setInterval`, `setTimeout`, `listen`, or `registerCleanup` are rejected and logged in dev mode.
+  - Kept `startGameLoop(gameId, startFn)` and `stopActiveGameLoop(reason)` semantics while enforcing forced stop on game switch.
+- Updated `js/game.js` route handling:
+  - Added development lifecycle logging for game navigation.
+  - Added a dashboard-route assertion warning when an active loop remains after unmount/stop.
+- Added lifecycle tests in `tests/game-loop-manager.test.mjs`:
+  - verifies stop cancels all managed RAF/interval/timeout resources,
+  - verifies switching games stops prior loop before new loop activation,
+  - verifies stopped scopes reject late registrations.
+
+### Verification
+- Ran: `node --test tests/*.mjs`
+- Result: PASS (`9` passed, `0` failed)
+
+### Acceptance Mapping
+1. Dedicated lifecycle manager module exporting start/stop semantics.
+   - PASS (`js/gameLoopManager.js`)
+2. Entering any routed game activates only that game loop/timers.
+   - PASS (all runtime timers/RAF are scope-managed; manager force-stops prior active session)
+3. Direct game-to-game navigation stops prior loop before next starts.
+   - PASS (`startGameLoop` forced-stop + `gameView` unmount path + validated in `tests/game-loop-manager.test.mjs`)
+4. Returning to dashboard halts all loops/timers.
+   - PASS (`gameHost.unmountActiveGame()` + `stopActiveGameLoop("navigated-dashboard")` + dashboard lingering-loop warning in dev)
+5. STATUS updated with integration details and extension guidance.
+   - PASS (this section)
+
+### Known Limitations / Exceptions
+- The single-active guarantee applies to loops/timers registered through the lifecycle `scope` API. Any future runtime that directly calls global `window.setInterval`/`window.requestAnimationFrame` outside `scope` can bypass enforcement.
+- Current dev assertions are console-based warnings/logs (non-throwing) to avoid breaking local gameplay flows while still surfacing lifecycle misuse.
+- To add a new game safely, register its runtime in `runtimeByGameId` (`js/gameRuntimes.js`) and use only `scope` methods (`requestFrame`, `setInterval`, `setTimeout`, `listen`, `registerCleanup`) for all long-lived callbacks/resources.
+
+## QA Validation Report (Workflow #38, 2026-03-11 UTC)
+Branch: `workflow/38/dev`
+Role: QA validation agent (no code changes; validation only)
+
+### Commits Reviewed (`main..HEAD`)
+1. `7e1955b` task/388: supervisor safety-commit (Codex omitted git commit)
+2. `98b7c65` task/383: validate navigation lifecycle and layout persistence
+3. `c86d176` task/381: add run summary report
+4. `99abc98` task/381: harden single active game loop lifecycle
+5. `aaee61f` task/385: update lifecycle manager status and task report docs
+6. `b84da9a` task/382: implement robust dashboard layout persistence
+7. `9dc4b4b` task/381: enforce single active game loop lifecycle
+8. `5692dca` task/380: formalize dashboard and game view navigation router
+
+### Diff Stat Reviewed (`git diff main...HEAD --stat`)
+```text
+ STATUS.md                         | 249 +++++++++++++++
+ TASK_REPORT.md                    |  53 ++--
+ css/styles.css                    | 197 +++++++++++-
+ index.html                        |   5 +-
+ js/dashboard/component.js         |  28 ++
+ js/dashboard/gameTile.js          |   7 +-
+ js/game.js                        | 132 +++++++-
+ js/gameLoopManager.js             | 289 +++++++++++++++++
+ js/gameRuntimes.js                | 647 ++++++++++++++++++++++++++++++++++++++
+ js/gameView.js                    |  96 ++++++
+ js/persistence.js                 | 185 +++++++++++
+ js/router.js                      | 110 +++++++
+ test-results/.last-run.json       |   4 +
+ tests/game-loop-manager.test.mjs  | 173 ++++++++++
+ tests/persistence.layout.test.mjs | 155 +++++++++
+ 15 files changed, 2290 insertions(+), 40 deletions(-)
+```
+
+### Test Commands Run and Results
+1. Command:
+   ```bash
+   node --version && node --test tests/*.mjs
+   ```
+   Output:
+   ```text
+   v22.22.1
+   TAP version 13
+   # anomaly.logic.test: ok
+   # Subtest: tests/anomaly.logic.test.mjs
+   ok 1 - tests/anomaly.logic.test.mjs
+   # clicker.logic.test: ok
+   # Subtest: tests/clicker.logic.test.mjs
+   ok 2 - tests/clicker.logic.test.mjs
+   # color-match.logic.test: ok
+   # Subtest: tests/color-match.logic.test.mjs
+   ok 3 - tests/color-match.logic.test.mjs
+   # dashboard.logic.test: ok
+   # Subtest: tests/dashboard.logic.test.mjs
+   ok 4 - tests/dashboard.logic.test.mjs
+   # game-loop-manager.test: ok
+   # Subtest: tests/game-loop-manager.test.mjs
+   ok 5 - tests/game-loop-manager.test.mjs
+   # persistence.layout.test: ok
+   # Subtest: tests/persistence.layout.test.mjs
+   ok 6 - tests/persistence.layout.test.mjs
+   # racing.controls.test: ok
+   # Subtest: tests/racing.controls.test.mjs
+   ok 7 - tests/racing.controls.test.mjs
+   # racing.logic.test: ok
+   # Subtest: tests/racing.logic.test.mjs
+   ok 8 - tests/racing.logic.test.mjs
+   # storage.score.test: ok
+   # Subtest: tests/storage.score.test.mjs
+   ok 9 - tests/storage.score.test.mjs
+   1..9
+   # tests 9
+   # pass 9
+   # fail 0
+   # duration_ms 451.990171
+   ```
+   Result: PASS
+
+2. Command:
+   ```bash
+   cat package.json | grep -A 30 '"scripts"'
+   ```
+   Output:
+   ```text
+   cat: package.json: No such file or directory
+   ```
+   Result: SKIPPED (no npm manifest in this repository)
+
+### Per-Task Acceptance Verdict
+1. Formalize dashboard view navigation router (`#380`): PASS
+   - `js/router.js` exports `navigateToDashboard()` and `navigateToGame(gameId)`.
+   - Tile play interactions in `js/dashboard/component.js` call `onPlayTile`; `js/game.js` wires `onPlayTile` to `navigateToGame`.
+   - Router toggles `hidden` on `#dashboardView` and `#gameView`, enforcing single visible main view.
+   - `createRouter().start()` applies hash route on load; invalid/missing game hash falls back to dashboard (`window.location.replace("#dashboard")`) without throwing.
+   - STATUS documentation includes navigation approach, files, and usage guidance.
+
+2. Ensure single active game loop lifecycle (`#381`): PASS
+   - `js/gameLoopManager.js` provides dedicated lifecycle control (`startGameLoop`, `stopActiveGameLoop`, `getActiveGameLoop`).
+   - `startGameLoop` force-stops existing session before starting new one.
+   - All active runtime timers/RAF/listeners in `js/gameRuntimes.js` use managed `scope` APIs.
+   - Dashboard navigation path (`js/game.js`) unmounts active runtime and stops loop on dashboard route.
+   - Automated coverage in `tests/game-loop-manager.test.mjs` verifies cleanup and switch behavior.
+   - STATUS documents module updates/integration and extension steps for future games.
+
+3. Implement robust tile layout persistence handling (`#382`): PASS
+   - `js/persistence.js` exports `loadLayout`, `saveLayout`, `resetLayout` using localStorage internally with guarded access.
+   - `js/game.js` persists tile order via dashboard `onChange` and restores with `loadLayout(...)` on startup.
+   - Invalid JSON/schema/read errors and unavailable storage paths return defaults and warn, without throwing uncaught exceptions.
+   - `tests/persistence.layout.test.mjs` validates round-trip persistence and malformed/unavailable storage fallback.
+   - STATUS documents storage key (`miniArcade.dashboard.layout.v1`), behavior, and extension/versioning guidance.
+
+4. Validate navigation, lifecycle, and layout persistence (`#383`): PASS
+   - Automated suite passes, including new lifecycle/persistence tests.
+   - Existing `TASK_REPORT.md` records browser E2E validation for fresh-load default layout, tile navigation, game-to-game and game-to-dashboard loop teardown, persistence across reload, and corrupted storage fallback.
+   - STATUS includes concise workflow validation summary and no blocking issues.
+
+### Workflow Goal Verdict
+Goal: Harden navigation, game loop lifecycle, and layout persistence for the dashboard shell.
+
+Verdict: PASS
+- Routing is centralized and hash-route resilient.
+- Loop lifecycle is single-active and teardown-safe across route transitions.
+- Layout persistence is versioned, resilient to corruption/storage failure, and falls back cleanly.

@@ -1,35 +1,28 @@
-# Task Report: TASK_ID 187 (RUN_ID 342)
+# Task Report: TASK_ID=383 RUN_ID=683
 
 ## Summary
-Added a new `Technical Overview` section to `README.md` covering project architecture, core components, technology stack, and data flow for the experiment mini arcade. Updated `STATUS.md` with a matching Task 187 entry documenting the README update and acceptance coverage.
+Completed end-to-end browser validation of dashboard navigation, game loop lifecycle handoff/teardown, and localStorage-backed layout persistence for the hardened shell.
 
-## Changes
-- Updated `README.md`:
-  - Added `## Technical Overview`
-  - Documented architecture layers: `Dashboard`, `Game Tiles`, `Games`, `Persistence Layer`
-  - Described main component responsibilities and relevant module locations
-  - Added technology stack details (`React`, `JavaScript`, `localStorage`, Node test runner)
-  - Added explicit runtime data flow from dashboard initialization to score persistence
-- Updated `STATUS.md`:
-  - Added `Task 187 Update (RUN_ID 342)`
-  - Included evidence, verification, and acceptance mapping for the technical overview addition
+## Validation Performed
+- Static app runtime:
+  - `python3 -m http.server 8000`
+- Logic tests:
+  - `node --test tests/*.mjs`
+  - Result: PASS (`9` passed, `0` failed)
+- Browser E2E validation (Playwright, Chromium headless) covering:
+  - clean startup with cleared localStorage,
+  - tile-driven navigation through central router,
+  - game-to-game transitions and back-to-dashboard loop teardown checks,
+  - tile reorder persistence across reload,
+  - malformed and missing layout storage fallback behavior.
 
-## Verification
-Executed:
-- `node --test tests/*.mjs`
+## Acceptance Results
+1. Fresh load after clearing localStorage showed default tile layout `['racing','clicker']` with no JS errors.
+2. Each dashboard tile navigated via hash router to exactly one game view/runtime host; no overlapping dashboard/game UI.
+3. `getActiveGameLoop()` confirmed only one active loop per game route, clean handoff on game switches, and `null` after returning to dashboard.
+4. Reordered layout persisted across reload; malformed or removed layout storage key cleanly fell back to default order without uncaught exceptions.
+5. `STATUS.md` updated with concise scenario coverage, observations, and workflow-goal confirmation.
 
-Result:
-- PASS: `tests/anomaly.logic.test.mjs`
-- PASS: `tests/clicker.logic.test.mjs`
-- PASS: `tests/color-match.logic.test.mjs`
-- PASS: `tests/dashboard.logic.test.mjs`
-- PASS: `tests/racing.controls.test.mjs`
-- PASS: `tests/racing.logic.test.mjs`
-- PASS: `tests/storage.score.test.mjs`
-
-## Acceptance Coverage
-1. `README.md` contains a `Technical Overview` section: PASS
-2. Section includes architecture details and component descriptions: PASS
-3. Technology stack and data flow are described as requested: PASS
-4. Markdown formatting is clear and consistent: PASS
-5. `STATUS.md` includes an entry on the updated README: PASS
+## Defects / Gaps
+- No blocking defects discovered for the validated scenarios.
+- Residual risk: validation focused on Chromium headless path; cross-browser/manual UX nuances were not expanded in this task.

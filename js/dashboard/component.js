@@ -352,6 +352,13 @@ export function createDashboardComponent(options = {}) {
     }
 
     const action = button.dataset.action;
+    if (action === "play") {
+      if (typeof options.onPlayTile === "function") {
+        options.onPlayTile(tileId);
+      }
+      return;
+    }
+
     if (action === "remove") {
       const result = removeDashboardTile(state, tileId);
       commitActionFeedback(result, {
@@ -375,6 +382,26 @@ export function createDashboardComponent(options = {}) {
         boardFeedbackClass: "is-feedback-move",
         tileFeedbackClass: "is-feedback-moved"
       });
+    }
+  }
+
+  function handleTileCardSelect(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (target.closest("button")) {
+      return;
+    }
+
+    const tileElement = target.closest(".dashboard-tile");
+    if (!(tileElement instanceof HTMLElement) || !tileElement.dataset.tileId) {
+      return;
+    }
+
+    if (typeof options.onPlayTile === "function") {
+      options.onPlayTile(tileElement.dataset.tileId);
     }
   }
 
@@ -517,6 +544,7 @@ export function createDashboardComponent(options = {}) {
   function bindEvents() {
     ui.addButton.addEventListener("click", handleAdd);
     ui.tileList.addEventListener("click", handleTileAction);
+    ui.tileList.addEventListener("click", handleTileCardSelect);
 
     ui.tileList.addEventListener("dragstart", handleDragStart);
     ui.tileList.addEventListener("dragover", handleDragOver);
