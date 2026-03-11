@@ -50,27 +50,36 @@ Implemented robust dashboard tile layout persistence with versioned schema valid
   4. Optionally add migration logic in `loadLayout(...)` for controlled upgrades from previous schema versions.
 
 ### Lifecycle Manager
-- Added `js/gameLoopManager.js` with:
+- Shared manager module: `js/gameLoopManager.js`
+- Exported APIs:
   - `startGameLoop(gameId, startFn)`
   - `stopActiveGameLoop(reason?)`
   - `getActiveGameLoop()`
-- Manager-owned scope tracks and tears down:
+- Singleton lifecycle guarantee:
+  - `startGameLoop(...)` force-stops any currently active loop/session before mounting the next runtime.
+  - `stopActiveGameLoop(...)` no-ops safely when nothing is active and returns whether a stop occurred.
+  - At most one active runtime scope can own RAF/timers/listeners at any point in time.
+- Manager-owned scope teardown covers:
   - `requestAnimationFrame` registrations
-  - `setInterval`/`setTimeout` registrations
+  - managed `setInterval`/`setTimeout` registrations
   - event listeners and custom cleanup callbacks
-- `startGameLoop` enforces singleton behavior by always stopping any previously active session before starting a new one.
-- Development-mode logging was added for forced pre-stop and cleanup errors so overlapping loops can be detected quickly in console output.
+- Navigation integration point (`js/game.js`):
+  - entering a game route calls `startGameLoop(game.id, ...)`
+  - game unmount and dashboard navigation call `stopActiveGameLoop(...)`
+  - route switches therefore stop old loops before new loops start
 
 ### Games Wired Into Lifecycle
-- Added `js/gameRuntimes.js` and mounted through the game view host:
-  - `anomaly` runtime uses `requestAnimationFrame` rendering + managed timer interval.
-  - `racing` runtime uses `requestAnimationFrame` for simulation/render + managed keyboard listeners.
-  - `clicker` runtime uses managed `setInterval` ticks.
-  - `color-match` runtime uses managed interval-driven UI heartbeat and round controls.
-- Game route transitions now route through lifecycle controls in `js/game.js`:
-  - Entering a game starts that game loop scope.
-  - Navigating between games tears down the old scope before starting the new one.
-  - Navigating back to dashboard unmounts runtime and stops any active scope.
+- Runtime registration source: `js/gameRuntimes.js` + route mount flow in `js/game.js`.
+- Current lifecycle wiring by game module:
+  - `Anomaly`: fully wired; managed RAF + managed interval/timer updates.
+  - `Racing`: fully wired; managed RAF + managed keyboard listeners.
+  - `Clicker`: fully wired; managed interval tick loop.
+  - `Color Match`: fully wired; managed interval heartbeat + event listeners.
+  - `Flappy`: runtime is registered (`flappy: mountFlappyRuntime`) and uses managed RAF, but not reachable from current dashboard catalog/routes.
+- Navigation behavior now consistently flows through manager controls:
+  - entering any routed game starts loop scope via `startGameLoop(...)`
+  - leaving game view stops scope via `stopActiveGameLoop(...)`
+  - switching game routes hard-stops prior scope before mounting next game
 
 ### Integration Files Updated
 - `js/game.js`: route-driven start/stop integration with lifecycle manager.
@@ -81,10 +90,11 @@ Implemented robust dashboard tile layout persistence with versioned schema valid
 ### Known Exceptions / Limitations
 - Flappy runtime code from earlier workflow history is not present in the current `js/` module graph and not listed in dashboard catalog routes.
 - A `flappy` runtime placeholder is registered in `js/gameRuntimes.js`, but it is not currently reachable through `DASHBOARD_DEFAULT_CATALOG`.
-- To add a new game in future work:
-  1. Add the game metadata entry to dashboard catalog.
-  2. Add a runtime mount function in `js/gameRuntimes.js`.
-  3. Ensure runtime uses the lifecycle scope APIs for all RAF/timer/listener resources.
+- To integrate any future game with lifecycle management:
+  1. Add game metadata to `DASHBOARD_DEFAULT_CATALOG` so routing can resolve it.
+  2. Register the game runtime in `js/gameRuntimes.js` (`runtimeByGameId[gameId] = mountFn`).
+  3. In `mountFn`, allocate all loop resources through the provided `scope` (`scope.requestFrame`, `scope.setInterval`, `scope.listen`, and cleanup hooks).
+  4. Return a runtime teardown function so `stopActiveGameLoop(...)` can perform full unmount cleanup on navigation.
 
 ### Navigation Approach
 - Added a small router module at `js/router.js` with explicit public functions:

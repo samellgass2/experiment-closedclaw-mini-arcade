@@ -1,43 +1,45 @@
-# Task Report: TASK_ID 382 (RUN_ID 671)
+# Task Report: TASK_ID 385 (RUN_ID 679)
 
 ## Summary
-Implemented robust dashboard tile layout persistence using a dedicated localStorage-backed module with schema validation, graceful fallbacks, and integration into dashboard layout change flow.
+Updated project documentation to reflect the shared game lifecycle/loop manager and its navigation integration, with explicit coverage of wired game modules and current Flappy limitations.
 
 ## What Changed
-- Added `js/persistence.js`:
-  - Exports layout-specific APIs:
-    - `loadLayout(options?)`
-    - `saveLayout(layoutModel, options?)`
-    - `resetLayout(options?)`
-  - Uses stable key `miniArcade.dashboard.layout.v1`.
-  - Uses versioned schema (`LAYOUT_SCHEMA_VERSION = 1`).
-  - Normalizes tile order (string-only, deduped, known-id filtered).
-  - Wraps localStorage resolve/read/write/remove in `try/catch` with warning logs and safe fallback behavior.
-- Updated `js/game.js`:
-  - Loads initial dashboard tile order from `loadLayout(...)` with fallback default `['racing', 'clicker']`.
-  - Wires `createDashboardComponent(..., onChange)` to persist `snapshot.tileIds` immediately after accepted layout changes.
-  - Deduplicates writes by comparing current tile order against last persisted order.
-  - Exposes `resetLayout` on `window.__MINI_ARCADE_DASHBOARD__` for manual reset support.
-- Added `tests/persistence.layout.test.mjs`:
-  - Verifies first-load fallback behavior.
-  - Verifies save/load round trip and normalization.
-  - Verifies malformed JSON fallback.
-  - Verifies older schema fallback.
-  - Verifies graceful behavior when storage read/write throws.
-  - Verifies reset behavior.
-- Updated `STATUS.md`:
-  - Added Task 382 section documenting layout model shape, storage key, first vs subsequent load behavior, defensive localStorage handling, and extension guidance for future schema versions.
+- Updated `STATUS.md` lifecycle documentation to clearly describe `js/gameLoopManager.js`:
+  - `startGameLoop(gameId, startFn)`
+  - `stopActiveGameLoop(reason?)`
+  - `getActiveGameLoop()`
+- Documented the single-active-loop guarantee:
+  - Starting a new game loop always stops any currently active session first.
+  - Dashboard navigation and game unmount paths stop active loops via the manager.
+  - The manager scope owns and tears down RAF handles, timers, listeners, and runtime cleanup callbacks.
+- Expanded `STATUS.md` game wiring notes to explicitly list:
+  - Flappy
+  - Anomaly
+  - Clicker
+  - Color Match
+  - Racing
+- Added explicit caveat for Flappy:
+  - Runtime is registered and manager-aware, but not currently reachable through dashboard catalog/routes.
+- Added concise guidance in `STATUS.md` for integrating future games with the lifecycle manager:
+  - add catalog entry
+  - register runtime
+  - use scope-managed resources
+  - return runtime teardown
+
+## Design Notes / Caveats
+- This task intentionally made documentation-only updates (no runtime behavior changes).
+- Navigation lifecycle behavior described in docs matches existing implementation in `js/game.js` and `js/gameRuntimes.js`.
 
 ## Verification
 Executed:
 - `node --test tests/*.mjs`
 
 Result:
-- PASS: all tests passing (8/8 test files).
+- PASS: all test files passed.
 
 ## Acceptance Mapping
-1. Persistence module with `loadLayout`, `saveLayout`, `resetLayout` using localStorage: PASS (`js/persistence.js`).
-2. Reordering persists and survives reload: PASS (dashboard `onChange` in `js/game.js` persists `snapshot.tileIds`).
-3. Corrupt/deleted storage falls back safely: PASS (`loadLayout` handles invalid/missing JSON with default fallback).
-4. localStorage unavailable/throws does not break UI: PASS (all storage operations are guarded; warnings logged; in-memory operation continues).
-5. Status documentation updated with model, keys, and extension notes: PASS (`STATUS.md` Task 382 section).
+1. `STATUS.md` lifecycle section includes manager module and exported APIs, with single-loop guarantee: PASS.
+2. `STATUS.md` lists Flappy, Anomaly, Clicker, Color Match, and Racing lifecycle wiring with limitation notes: PASS.
+3. `STATUS.md` explains how to integrate future games with lifecycle manager: PASS.
+4. `TASK_REPORT.md` summarizes implementation/design caveats and confirms navigation start/stop behavior through manager: PASS.
+5. Diff is limited to documentation files only and remains within scope: PASS.
