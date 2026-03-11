@@ -1656,3 +1656,127 @@ Implemented and validated a shared single-active-game lifecycle across all route
 - The single-active guarantee applies to loops/timers registered through the lifecycle `scope` API. Any future runtime that directly calls global `window.setInterval`/`window.requestAnimationFrame` outside `scope` can bypass enforcement.
 - Current dev assertions are console-based warnings/logs (non-throwing) to avoid breaking local gameplay flows while still surfacing lifecycle misuse.
 - To add a new game safely, register its runtime in `runtimeByGameId` (`js/gameRuntimes.js`) and use only `scope` methods (`requestFrame`, `setInterval`, `setTimeout`, `listen`, `registerCleanup`) for all long-lived callbacks/resources.
+
+## QA Validation Report (Workflow #38, 2026-03-11 UTC)
+Branch: `workflow/38/dev`
+Role: QA validation agent (no code changes; validation only)
+
+### Commits Reviewed (`main..HEAD`)
+1. `7e1955b` task/388: supervisor safety-commit (Codex omitted git commit)
+2. `98b7c65` task/383: validate navigation lifecycle and layout persistence
+3. `c86d176` task/381: add run summary report
+4. `99abc98` task/381: harden single active game loop lifecycle
+5. `aaee61f` task/385: update lifecycle manager status and task report docs
+6. `b84da9a` task/382: implement robust dashboard layout persistence
+7. `9dc4b4b` task/381: enforce single active game loop lifecycle
+8. `5692dca` task/380: formalize dashboard and game view navigation router
+
+### Diff Stat Reviewed (`git diff main...HEAD --stat`)
+```text
+ STATUS.md                         | 249 +++++++++++++++
+ TASK_REPORT.md                    |  53 ++--
+ css/styles.css                    | 197 +++++++++++-
+ index.html                        |   5 +-
+ js/dashboard/component.js         |  28 ++
+ js/dashboard/gameTile.js          |   7 +-
+ js/game.js                        | 132 +++++++-
+ js/gameLoopManager.js             | 289 +++++++++++++++++
+ js/gameRuntimes.js                | 647 ++++++++++++++++++++++++++++++++++++++
+ js/gameView.js                    |  96 ++++++
+ js/persistence.js                 | 185 +++++++++++
+ js/router.js                      | 110 +++++++
+ test-results/.last-run.json       |   4 +
+ tests/game-loop-manager.test.mjs  | 173 ++++++++++
+ tests/persistence.layout.test.mjs | 155 +++++++++
+ 15 files changed, 2290 insertions(+), 40 deletions(-)
+```
+
+### Test Commands Run and Results
+1. Command:
+   ```bash
+   node --version && node --test tests/*.mjs
+   ```
+   Output:
+   ```text
+   v22.22.1
+   TAP version 13
+   # anomaly.logic.test: ok
+   # Subtest: tests/anomaly.logic.test.mjs
+   ok 1 - tests/anomaly.logic.test.mjs
+   # clicker.logic.test: ok
+   # Subtest: tests/clicker.logic.test.mjs
+   ok 2 - tests/clicker.logic.test.mjs
+   # color-match.logic.test: ok
+   # Subtest: tests/color-match.logic.test.mjs
+   ok 3 - tests/color-match.logic.test.mjs
+   # dashboard.logic.test: ok
+   # Subtest: tests/dashboard.logic.test.mjs
+   ok 4 - tests/dashboard.logic.test.mjs
+   # game-loop-manager.test: ok
+   # Subtest: tests/game-loop-manager.test.mjs
+   ok 5 - tests/game-loop-manager.test.mjs
+   # persistence.layout.test: ok
+   # Subtest: tests/persistence.layout.test.mjs
+   ok 6 - tests/persistence.layout.test.mjs
+   # racing.controls.test: ok
+   # Subtest: tests/racing.controls.test.mjs
+   ok 7 - tests/racing.controls.test.mjs
+   # racing.logic.test: ok
+   # Subtest: tests/racing.logic.test.mjs
+   ok 8 - tests/racing.logic.test.mjs
+   # storage.score.test: ok
+   # Subtest: tests/storage.score.test.mjs
+   ok 9 - tests/storage.score.test.mjs
+   1..9
+   # tests 9
+   # pass 9
+   # fail 0
+   # duration_ms 451.990171
+   ```
+   Result: PASS
+
+2. Command:
+   ```bash
+   cat package.json | grep -A 30 '"scripts"'
+   ```
+   Output:
+   ```text
+   cat: package.json: No such file or directory
+   ```
+   Result: SKIPPED (no npm manifest in this repository)
+
+### Per-Task Acceptance Verdict
+1. Formalize dashboard view navigation router (`#380`): PASS
+   - `js/router.js` exports `navigateToDashboard()` and `navigateToGame(gameId)`.
+   - Tile play interactions in `js/dashboard/component.js` call `onPlayTile`; `js/game.js` wires `onPlayTile` to `navigateToGame`.
+   - Router toggles `hidden` on `#dashboardView` and `#gameView`, enforcing single visible main view.
+   - `createRouter().start()` applies hash route on load; invalid/missing game hash falls back to dashboard (`window.location.replace("#dashboard")`) without throwing.
+   - STATUS documentation includes navigation approach, files, and usage guidance.
+
+2. Ensure single active game loop lifecycle (`#381`): PASS
+   - `js/gameLoopManager.js` provides dedicated lifecycle control (`startGameLoop`, `stopActiveGameLoop`, `getActiveGameLoop`).
+   - `startGameLoop` force-stops existing session before starting new one.
+   - All active runtime timers/RAF/listeners in `js/gameRuntimes.js` use managed `scope` APIs.
+   - Dashboard navigation path (`js/game.js`) unmounts active runtime and stops loop on dashboard route.
+   - Automated coverage in `tests/game-loop-manager.test.mjs` verifies cleanup and switch behavior.
+   - STATUS documents module updates/integration and extension steps for future games.
+
+3. Implement robust tile layout persistence handling (`#382`): PASS
+   - `js/persistence.js` exports `loadLayout`, `saveLayout`, `resetLayout` using localStorage internally with guarded access.
+   - `js/game.js` persists tile order via dashboard `onChange` and restores with `loadLayout(...)` on startup.
+   - Invalid JSON/schema/read errors and unavailable storage paths return defaults and warn, without throwing uncaught exceptions.
+   - `tests/persistence.layout.test.mjs` validates round-trip persistence and malformed/unavailable storage fallback.
+   - STATUS documents storage key (`miniArcade.dashboard.layout.v1`), behavior, and extension/versioning guidance.
+
+4. Validate navigation, lifecycle, and layout persistence (`#383`): PASS
+   - Automated suite passes, including new lifecycle/persistence tests.
+   - Existing `TASK_REPORT.md` records browser E2E validation for fresh-load default layout, tile navigation, game-to-game and game-to-dashboard loop teardown, persistence across reload, and corrupted storage fallback.
+   - STATUS includes concise workflow validation summary and no blocking issues.
+
+### Workflow Goal Verdict
+Goal: Harden navigation, game loop lifecycle, and layout persistence for the dashboard shell.
+
+Verdict: PASS
+- Routing is centralized and hash-route resilient.
+- Loop lifecycle is single-active and teardown-safe across route transitions.
+- Layout persistence is versioned, resilient to corruption/storage failure, and falls back cleanly.
