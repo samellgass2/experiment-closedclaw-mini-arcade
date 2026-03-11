@@ -1,46 +1,43 @@
-# Task Report: TASK_ID 381 (RUN_ID 670)
+# Task Report: TASK_ID 382 (RUN_ID 671)
 
 ## Summary
-Implemented a shared game loop lifecycle controller and wired router-driven game mount/unmount so only one game runtime loop/timer set is active at a time.
+Implemented robust dashboard tile layout persistence using a dedicated localStorage-backed module with schema validation, graceful fallbacks, and integration into dashboard layout change flow.
 
 ## What Changed
-- Added `js/gameLoopManager.js`:
-  - Exports `startGameLoop(gameId, startFn)` and `stopActiveGameLoop(reason?)`.
-  - Tracks/cancels managed `requestAnimationFrame`, `setInterval`, `setTimeout`, event listeners, and custom cleanups.
-  - Enforces singleton active runtime by forcing teardown before new game startup.
-  - Includes development logging for overlap detection and cleanup failures.
-- Added `js/gameRuntimes.js`:
-  - Runtime mount implementations for `anomaly`, `racing`, `clicker`, and `color-match`.
-  - Each runtime uses lifecycle scope APIs for timers/RAF/listeners so teardown is centralized.
-  - Includes `flappy` placeholder runtime registration (not currently catalog-routable).
-- Updated `js/gameView.js`:
-  - Added explicit runtime mount/unmount lifecycle via `mountGame(...)` + `unmountActiveGame()`.
-  - Ensures unmount executes before any route re-render.
+- Added `js/persistence.js`:
+  - Exports layout-specific APIs:
+    - `loadLayout(options?)`
+    - `saveLayout(layoutModel, options?)`
+    - `resetLayout(options?)`
+  - Uses stable key `miniArcade.dashboard.layout.v1`.
+  - Uses versioned schema (`LAYOUT_SCHEMA_VERSION = 1`).
+  - Normalizes tile order (string-only, deduped, known-id filtered).
+  - Wraps localStorage resolve/read/write/remove in `try/catch` with warning logs and safe fallback behavior.
 - Updated `js/game.js`:
-  - Integrates lifecycle manager into route transitions.
-  - Entering a game starts scoped runtime; leaving/switching stops active runtime.
-  - Dashboard navigation explicitly halts all active loops.
-- Updated `css/styles.css`:
-  - Added runtime host/HUD styling for mounted game UIs.
+  - Loads initial dashboard tile order from `loadLayout(...)` with fallback default `['racing', 'clicker']`.
+  - Wires `createDashboardComponent(..., onChange)` to persist `snapshot.tileIds` immediately after accepted layout changes.
+  - Deduplicates writes by comparing current tile order against last persisted order.
+  - Exposes `resetLayout` on `window.__MINI_ARCADE_DASHBOARD__` for manual reset support.
+- Added `tests/persistence.layout.test.mjs`:
+  - Verifies first-load fallback behavior.
+  - Verifies save/load round trip and normalization.
+  - Verifies malformed JSON fallback.
+  - Verifies older schema fallback.
+  - Verifies graceful behavior when storage read/write throws.
+  - Verifies reset behavior.
 - Updated `STATUS.md`:
-  - Added Task 381 section documenting manager design, integrated games, and known limitations.
+  - Added Task 382 section documenting layout model shape, storage key, first vs subsequent load behavior, defensive localStorage handling, and extension guidance for future schema versions.
 
 ## Verification
 Executed:
-- `node --check js/game.js`
-- `node --check js/gameRuntimes.js`
 - `node --test tests/*.mjs`
 
 Result:
-- PASS: all checks/tests succeeded (7/7 test files passing).
+- PASS: all tests passing (8/8 test files).
 
 ## Acceptance Mapping
-1. Dedicated lifecycle manager module exists and exports start/stop APIs: PASS (`js/gameLoopManager.js`).
-2. Entering a game activates only that game loop/timers: PASS (manager force-stops prior runtime before start).
-3. Direct game-to-game navigation stops prior runtime before next starts: PASS (`renderGame` unmount + manager singleton enforcement).
-4. Navigating to dashboard halts all loops/timers: PASS (`onRouteChange` dashboard branch calls unmount + `stopActiveGameLoop`).
-5. Status document records updates and integration guidance: PASS (`STATUS.md` Task 381 section).
-
-## Known Limitations
-- Flappy game implementation from earlier workflow history is not present in active `js/` game module graph and not exposed in dashboard catalog routing.
-- A `flappy` runtime placeholder is registered for forward integration, and this limitation is documented in `STATUS.md`.
+1. Persistence module with `loadLayout`, `saveLayout`, `resetLayout` using localStorage: PASS (`js/persistence.js`).
+2. Reordering persists and survives reload: PASS (dashboard `onChange` in `js/game.js` persists `snapshot.tileIds`).
+3. Corrupt/deleted storage falls back safely: PASS (`loadLayout` handles invalid/missing JSON with default fallback).
+4. localStorage unavailable/throws does not break UI: PASS (all storage operations are guarded; warnings logged; in-memory operation continues).
+5. Status documentation updated with model, keys, and extension notes: PASS (`STATUS.md` Task 382 section).

@@ -11,6 +11,44 @@ Formalized dashboard/game navigation with a dedicated hash-based router so view 
 ## Task 381 Update (RUN_ID 670)
 Implemented a shared game loop lifecycle manager so only one game runtime loop/timer set can be active at a time across router transitions.
 
+## Task 382 Update (RUN_ID 671)
+Implemented robust dashboard tile layout persistence with versioned schema validation and guarded `localStorage` usage.
+
+### Layout Persistence Module
+- Added `js/persistence.js` with dedicated layout APIs:
+  - `loadLayout(options?)`
+  - `saveLayout(layoutModel, options?)`
+  - `resetLayout(options?)`
+- Storage key:
+  - `miniArcade.dashboard.layout.v1`
+- Layout schema:
+  - `version`: number (`1` currently)
+  - `tileOrder`: array of unique tile ids in render order, filtered to known catalog ids
+  - `updatedAt`: ISO timestamp written on save (reserved for future migration/debug use)
+
+### Runtime Behavior
+- First load (no key present):
+  - Dashboard starts from default order `["racing", "clicker"]`.
+- Subsequent loads (valid key present):
+  - Dashboard starts from persisted `tileOrder`.
+- Any accepted layout change (add, remove, move-left/right, drag-and-drop reorder):
+  - Dashboard snapshot changes trigger immediate `saveLayout(...)` from `js/game.js`.
+  - Saves are deduplicated by comparing last persisted order to current `snapshot.tileIds`.
+
+### Defensive Fallbacks
+- `localStorage` access is wrapped with `try/catch` at resolve/read/write/remove call sites.
+- If storage is unavailable (privacy mode restrictions, denied access, monkey patched exceptions):
+  - Dashboard continues with in-memory layout and logs a warning.
+- If stored layout payload is malformed JSON, invalid shape, or wrong schema version:
+  - App falls back to default tile ordering without throwing uncaught errors.
+
+### Extension Guidance
+- To extend layout metadata in a future schema:
+  1. Increment `LAYOUT_SCHEMA_VERSION` and key suffix (for example `.v2`) in `js/persistence.js`.
+  2. Add new fields alongside `tileOrder` (for example `tileMeta`, `widgetState`, `collapsedByTileId`).
+  3. Keep `tileOrder` normalization (dedupe/filter known ids) so incompatible or stale ids are safely ignored.
+  4. Optionally add migration logic in `loadLayout(...)` for controlled upgrades from previous schema versions.
+
 ### Lifecycle Manager
 - Added `js/gameLoopManager.js` with:
   - `startGameLoop(gameId, startFn)`

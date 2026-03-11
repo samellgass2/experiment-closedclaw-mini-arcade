@@ -2,6 +2,7 @@ import { createDashboardComponent, DASHBOARD_DEFAULT_CATALOG } from "./dashboard
 import { mountRuntimeForGame } from "./gameRuntimes.js";
 import { startGameLoop, stopActiveGameLoop } from "./gameLoopManager.js";
 import { createGameView } from "./gameView.js";
+import { loadLayout, resetLayout, saveLayout } from "./persistence.js";
 import { createRouter, navigateToDashboard, navigateToGame } from "./router.js";
 
 function initializeDashboard() {
@@ -18,12 +19,45 @@ function initializeDashboard() {
   }
 
   const catalogById = new Map(DASHBOARD_DEFAULT_CATALOG.map((game) => [game.id, game]));
+  const knownTileIds = DASHBOARD_DEFAULT_CATALOG.map((game) => game.id);
+  const defaultTileOrder = ["racing", "clicker"];
+  const initialTileIds = loadLayout({
+    defaultTileOrder,
+    knownTileIds
+  });
+  let lastPersistedTileIds = [...initialTileIds];
+
+  function persistLayoutFromSnapshot(snapshot) {
+    if (!snapshot || !Array.isArray(snapshot.tileIds)) {
+      return;
+    }
+
+    const nextTileIds = snapshot.tileIds;
+    const orderUnchanged =
+      nextTileIds.length === lastPersistedTileIds.length &&
+      nextTileIds.every((tileId, index) => tileId === lastPersistedTileIds[index]);
+
+    if (orderUnchanged) {
+      return;
+    }
+
+    saveLayout(
+      {
+        tileOrder: nextTileIds
+      },
+      {
+        knownTileIds
+      }
+    );
+    lastPersistedTileIds = [...nextTileIds];
+  }
 
   const component = createDashboardComponent({
     root: dashboardRoot,
     catalog: DASHBOARD_DEFAULT_CATALOG,
-    initialTileIds: ["racing", "clicker"],
+    initialTileIds,
     maxTiles: DASHBOARD_DEFAULT_CATALOG.length,
+    onChange: (snapshot) => persistLayoutFromSnapshot(snapshot),
     onPlayTile: (gameId) => navigateToGame(gameId)
   });
 
@@ -69,6 +103,10 @@ function initializeDashboard() {
   window.__MINI_ARCADE_DASHBOARD__ = {
     getSnapshot: component.getSnapshot,
     setGameScore: component.setGameScore,
+    resetLayout: () => {
+      resetLayout();
+      lastPersistedTileIds = [];
+    },
     navigateToDashboard,
     navigateToGame
   };
