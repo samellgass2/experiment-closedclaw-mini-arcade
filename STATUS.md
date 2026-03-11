@@ -14,6 +14,44 @@ Implemented a shared game loop lifecycle manager so only one game runtime loop/t
 ## Task 382 Update (RUN_ID 671)
 Implemented robust dashboard tile layout persistence with versioned schema validation and guarded `localStorage` usage.
 
+## Task 383 Update (RUN_ID 683)
+Validated hardened dashboard routing, lifecycle management, and layout persistence together through a browser-driven end-to-end pass.
+
+### Validation Scope and Method
+- Served app as static site via:
+  - `python3 -m http.server 8000`
+- Ran automated browser workflow with Playwright (Chromium, headless) from a clean localStorage state.
+- Also ran logic regression tests:
+  - `node --test tests/*.mjs`
+
+### Acceptance Coverage
+- Fresh load / default layout:
+  - Cleared localStorage, loaded app, and confirmed dashboard opened with default tile order:
+    - `["racing", "clicker"]`
+  - Verified no uncaught page errors and no console `error` entries during startup.
+- Central router navigation from tiles:
+  - Added remaining catalog tiles (`color-match`, `anomaly`) and invoked `Play` on each tile.
+  - Confirmed hash routes transitioned through centralized router (`#game/<id>`), with exactly one visible game runtime host each time and no overlapping dashboard/game views.
+- Single active game loop lifecycle:
+  - On each game entry, inspected `getActiveGameLoop()` and confirmed active `gameId` matched the route.
+  - On each back navigation to dashboard (`#dashboard`), confirmed `getActiveGameLoop()` returned `null`.
+  - During direct game-to-game transition (`racing -> clicker`), confirmed session handoff:
+    - previous session stopped, new session id allocated, and only destination game loop remained active.
+- Layout reorder persistence and fallback safety:
+  - Reordered tiles (move-right on `racing` twice), reloaded page, and confirmed persisted order restored:
+    - `["clicker", "color-match", "racing", "anomaly"]`
+  - Corrupted storage key `miniArcade.dashboard.layout.v1` with malformed JSON and reloaded:
+    - clean fallback to default layout with no uncaught exceptions.
+  - Removed layout key and reloaded:
+    - clean fallback to default layout with no uncaught exceptions.
+
+### Observations / Defects
+- No blocking defects found in navigation, lifecycle teardown/startup, or layout persistence fallback handling for tested scenarios.
+- No JavaScript runtime errors observed during the validation pass.
+
+### Goal Status
+- Workflow goal **met** for TASK_ID `383` based on the above end-to-end validation results.
+
 ### Layout Persistence Module
 - Added `js/persistence.js` with dedicated layout APIs:
   - `loadLayout(options?)`

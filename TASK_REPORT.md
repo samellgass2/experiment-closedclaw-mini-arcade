@@ -1,26 +1,28 @@
-# Task Report: TASK_ID=381 RUN_ID=682
+# Task Report: TASK_ID=383 RUN_ID=683
 
 ## Summary
-Implemented and validated single-active game loop lifecycle enforcement across routed games (Flappy, Anomaly, Clicker, Color Match, Racing).
+Completed end-to-end browser validation of dashboard navigation, game loop lifecycle handoff/teardown, and localStorage-backed layout persistence for the hardened shell.
 
-## What Changed
-- Hardened shared lifecycle controller in `js/gameLoopManager.js`:
-  - preserved `startGameLoop(gameId, startFn)` and `stopActiveGameLoop(reason)` API,
-  - added per-session IDs and managed-resource diagnostics,
-  - added stopped-scope defensive guards for late `requestFrame`/`setInterval`/`setTimeout`/`listen`/`registerCleanup` calls,
-  - improved development logging for start/stop and forced switch teardown.
-- Updated route lifecycle checks in `js/game.js`:
-  - added development logging around game navigation,
-  - added dashboard-route warning if an active loop remains after teardown.
-- Added lifecycle regression tests in `tests/game-loop-manager.test.mjs`:
-  - stop cancels RAF/interval/timeout,
-  - switching games stops prior loop before next starts,
-  - stopped scope rejects late registrations.
-- Updated `STATUS.md` with Task 381 implementation details, acceptance mapping, and known limitations.
+## Validation Performed
+- Static app runtime:
+  - `python3 -m http.server 8000`
+- Logic tests:
+  - `node --test tests/*.mjs`
+  - Result: PASS (`9` passed, `0` failed)
+- Browser E2E validation (Playwright, Chromium headless) covering:
+  - clean startup with cleared localStorage,
+  - tile-driven navigation through central router,
+  - game-to-game transitions and back-to-dashboard loop teardown checks,
+  - tile reorder persistence across reload,
+  - malformed and missing layout storage fallback behavior.
 
-## Validation
-- Ran `node --test tests/*.mjs`
-- Result: PASS (`9` passed, `0` failed)
+## Acceptance Results
+1. Fresh load after clearing localStorage showed default tile layout `['racing','clicker']` with no JS errors.
+2. Each dashboard tile navigated via hash router to exactly one game view/runtime host; no overlapping dashboard/game UI.
+3. `getActiveGameLoop()` confirmed only one active loop per game route, clean handoff on game switches, and `null` after returning to dashboard.
+4. Reordered layout persisted across reload; malformed or removed layout storage key cleanly fell back to default order without uncaught exceptions.
+5. `STATUS.md` updated with concise scenario coverage, observations, and workflow-goal confirmation.
 
-## Commit
-- `99abc98` `task/381: harden single active game loop lifecycle`
+## Defects / Gaps
+- No blocking defects discovered for the validated scenarios.
+- Residual risk: validation focused on Chromium headless path; cross-browser/manual UX nuances were not expanded in this task.
