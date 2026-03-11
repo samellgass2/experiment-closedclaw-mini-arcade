@@ -5,6 +5,46 @@
 - Workflow: `Implement Top-Down Racing Game`
 - Snapshot Date (UTC): `2026-03-06`
 
+## Task 380 Update (RUN_ID 669)
+Formalized dashboard/game navigation with a dedicated hash-based router so view switching is centralized and predictable.
+
+### Navigation Approach
+- Added a small router module at `js/router.js` with explicit public functions:
+  - `navigateToDashboard()`
+  - `navigateToGame(gameId)`
+- Routing uses URL hash state:
+  - Dashboard route: `#dashboard`
+  - Game route: `#game/<gameId>`
+- Router startup parses current hash and applies a safe fallback to dashboard when the game id is unknown, so reload on game hashes stays coherent.
+
+### Files Touched
+- `index.html`
+  - Introduced separate primary app view containers:
+    - `#dashboardView` with `#dashboardApp`
+    - `#gameView` with `#gameViewApp`
+- `css/styles.css`
+  - Added shared `.app-view` visibility rules and game-view styles.
+  - Added `Play` button styling for dashboard tiles.
+- `js/router.js` (new)
+  - Central route parsing + hash listeners + view visibility control.
+- `js/gameView.js` (new)
+  - Lightweight game-view host with back-to-dashboard action and per-game metadata rendering.
+- `js/game.js`
+  - Wired router startup and route-change handling.
+  - Wired dashboard tile play actions to `navigateToGame(gameId)`.
+  - Exposed router helpers on `window.__MINI_ARCADE_DASHBOARD__`.
+- `js/dashboard/component.js`
+  - Added tile click navigation callback path (`onPlayTile`).
+  - Added `play` button action handling in centralized tile event handling.
+- `js/dashboard/gameTile.js`
+  - Added `Play` control (`data-action="play"`) on each tile.
+
+### Tile Navigation Behavior Changes
+- Dashboard tiles now route through the central router instead of ad-hoc DOM toggles.
+- Clicking a tile card (excluding control buttons) opens that game route.
+- Clicking the tile `Play` button also opens that game route.
+- Back navigation from game view goes through `navigateToDashboard()` and restores dashboard visibility without overlapping views.
+
 ## Task 102 Update (RUN_ID 181)
 Implemented initial anomaly detection game structure by replacing Flappy-specific page wiring with a modular anomaly game scaffold.
 

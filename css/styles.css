@@ -39,13 +39,65 @@ body {
   padding: 24px;
 }
 
-.dashboard-card {
+.app-view {
   width: min(100%, 1120px);
+}
+
+.app-view[hidden] {
+  display: none !important;
+}
+
+.dashboard-card {
   border: 2px solid var(--line);
   border-radius: 20px;
   background: var(--card);
   box-shadow: var(--shadow);
   padding: 18px;
+}
+
+.game-card {
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.game-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.game-back-button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  background: #f7fbff;
+  cursor: pointer;
+}
+
+.game-view-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+}
+
+.game-view-summary {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+.game-view-panel {
+  margin-top: 14px;
+  border: 1px solid #c7d8e5;
+  border-radius: 14px;
+  background: #fcfeff;
+  padding: 14px;
 }
 
 .dashboard-title {
@@ -433,6 +485,13 @@ body {
   background: #fcfeff;
 }
 
+.tile-button-primary {
+  border-color: #d28760;
+  color: #88390f;
+  background: #fff2e8;
+  font-weight: 700;
+}
+
 .tile-button-danger {
   border-color: #dcb2b2;
   background: #fff3f3;
@@ -595,7 +654,8 @@ body {
     padding: 10px;
   }
 
-  .dashboard-card {
+  .dashboard-card,
+  .game-card {
     border-radius: 12px;
     padding: 12px;
   }
