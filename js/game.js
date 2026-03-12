@@ -47,6 +47,7 @@ function initializeDashboard() {
       description: "Cross-game leaderboard based on stored best scores.",
       difficulty: "All Modes",
       mode: "Stats",
+      tileType: "stats",
       isStatsTile: true
     },
     {
@@ -55,6 +56,7 @@ function initializeDashboard() {
       description: "Latest arcade sessions and total attempts across all games.",
       difficulty: "All Modes",
       mode: "Stats",
+      tileType: "stats",
       isStatsTile: true
     },
     ...DASHBOARD_DEFAULT_CATALOG
@@ -62,10 +64,14 @@ function initializeDashboard() {
 
   const catalogById = new Map(dashboardCatalog.map((game) => [game.id, game]));
   const knownTileIds = dashboardCatalog.map((game) => game.id);
+  const knownTileTypes = new Map(
+    dashboardCatalog.map((tile) => [tile.id, tile.tileType === "stats" || tile.isStatsTile ? "stats" : "game"])
+  );
   const defaultTileOrder = [HIGH_SCORES_TILE_ID, RECENT_PLAYS_ATTEMPTS_TILE_ID, "racing", "clicker"];
   const initialTileIds = loadLayout({
     defaultTileOrder,
-    knownTileIds
+    knownTileIds,
+    knownTileTypes
   });
   let lastPersistedTileIds = [...initialTileIds];
 
@@ -85,10 +91,15 @@ function initializeDashboard() {
 
     saveLayout(
       {
-        tileOrder: nextTileIds
+        tileOrder: nextTileIds,
+        tiles: snapshot.tiles.map((tile) => ({
+          id: tile.id,
+          tileType: tile.tileType
+        }))
       },
       {
-        knownTileIds
+        knownTileIds,
+        knownTileTypes
       }
     );
     lastPersistedTileIds = [...nextTileIds];

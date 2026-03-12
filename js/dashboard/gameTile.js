@@ -79,12 +79,24 @@ export function createGameTileElement(game, index, tileCount) {
   moveRightButton.disabled = index === tileCount - 1;
   moveRightButton.setAttribute("aria-label", `Move ${gameName} tile right`);
 
+  const moveUpButton = createNode("button", "tile-button tile-button-secondary", "Move Up");
+  moveUpButton.type = "button";
+  moveUpButton.dataset.action = "move-up";
+  moveUpButton.disabled = index === 0;
+  moveUpButton.setAttribute("aria-label", `Move ${gameName} tile up`);
+
+  const moveDownButton = createNode("button", "tile-button tile-button-secondary", "Move Down");
+  moveDownButton.type = "button";
+  moveDownButton.dataset.action = "move-down";
+  moveDownButton.disabled = index === tileCount - 1;
+  moveDownButton.setAttribute("aria-label", `Move ${gameName} tile down`);
+
   const removeButton = createNode("button", "tile-button tile-button-danger", "Remove");
   removeButton.type = "button";
   removeButton.dataset.action = "remove";
   removeButton.setAttribute("aria-label", `Remove ${gameName} tile from dashboard`);
 
-  controls.append(playButton, moveLeftButton, moveRightButton, removeButton);
+  controls.append(playButton, moveLeftButton, moveRightButton, moveUpButton, moveDownButton, removeButton);
   item.append(headingRow, summary, meta, dragHint, score, controls);
   return item;
 }

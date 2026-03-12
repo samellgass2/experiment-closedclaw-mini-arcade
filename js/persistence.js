@@ -77,22 +77,62 @@ function normalizeTileOrder(tileOrder, knownTileIds) {
   return normalized;
 }
 
+function normalizeKnownTileTypeMap(knownTileTypes) {
+  if (knownTileTypes instanceof Map) {
+    return knownTileTypes;
+  }
+
+  if (knownTileTypes && typeof knownTileTypes === "object") {
+    return new Map(Object.entries(knownTileTypes));
+  }
+
+  return new Map();
+}
+
+function normalizeTileType(tileType) {
+  return tileType === "stats" ? "stats" : "game";
+}
+
+function normalizeTileEntries(tileEntries, knownTileIds, knownTileTypes) {
+  const tileTypeMap = normalizeKnownTileTypeMap(knownTileTypes);
+  const tileOrder = normalizeTileOrder(
+    Array.isArray(tileEntries)
+      ? tileEntries.map((entry) => (typeof entry === "string" ? entry : entry?.id))
+      : [],
+    knownTileIds
+  );
+
+  return tileOrder.map((tileId) => {
+    const sourceEntry = Array.isArray(tileEntries)
+      ? tileEntries.find((entry) => (typeof entry === "object" && entry !== null ? entry.id === tileId : false))
+      : null;
+    const mappedType = tileTypeMap.get(tileId);
+    return {
+      id: tileId,
+      tileType: normalizeTileType(sourceEntry?.tileType ?? sourceEntry?.type ?? mappedType)
+    };
+  });
+}
+
 function isLayoutModel(candidate) {
   return (
     candidate &&
     typeof candidate === "object" &&
     !Array.isArray(candidate) &&
     Number.isInteger(candidate.version) &&
-    Array.isArray(candidate.tileOrder)
+    (Array.isArray(candidate.tileOrder) || Array.isArray(candidate.tiles))
   );
 }
 
-function normalizeLayoutModel(layoutModel, knownTileIds) {
+function normalizeLayoutModel(layoutModel, knownTileIds, knownTileTypes) {
   if (Array.isArray(layoutModel)) {
+    const tiles = normalizeTileEntries(layoutModel, knownTileIds, knownTileTypes);
     // Allow saveLayout to accept a raw tile id list for convenience.
     return {
       version: LAYOUT_SCHEMA_VERSION,
-      tileOrder: normalizeTileOrder(layoutModel, knownTileIds)
+      tileOrder: tiles.map((tile) => tile.id),
+      tiles,
+      updatedAt: new Date().toISOString()
     };
   }
 
@@ -100,11 +140,17 @@ function normalizeLayoutModel(layoutModel, knownTileIds) {
     return null;
   }
 
-  const tileOrder = normalizeTileOrder(layoutModel.tileOrder, knownTileIds);
+  const tiles = normalizeTileEntries(
+    Array.isArray(layoutModel.tiles) ? layoutModel.tiles : layoutModel.tileOrder,
+    knownTileIds,
+    layoutModel.knownTileTypes ?? knownTileTypes
+  );
+  const tileOrder = tiles.map((tile) => tile.id);
 
   return {
     version: LAYOUT_SCHEMA_VERSION,
     tileOrder,
+    tiles,
     updatedAt: new Date().toISOString()
   };
 }
@@ -171,7 +217,12 @@ export function loadLayout(options = {}) {
     return [...defaultTileOrder];
   }
 
-  return normalizeTileOrder(parsed.tileOrder, options.knownTileIds);
+  if (Array.isArray(parsed.tileOrder)) {
+    return normalizeTileOrder(parsed.tileOrder, options.knownTileIds);
+  }
+
+  const tiles = normalizeTileEntries(parsed.tiles, options.knownTileIds, options.knownTileTypes);
+  return tiles.map((tile) => tile.id);
 }
 
 export function saveLayout(layoutModel, options = {}) {
@@ -183,7 +234,7 @@ export function saveLayout(layoutModel, options = {}) {
     return false;
   }
 
-  const normalizedModel = normalizeLayoutModel(layoutModel, options.knownTileIds);
+  const normalizedModel = normalizeLayoutModel(layoutModel, options.knownTileIds, options.knownTileTypes);
   if (!normalizedModel) {
     warnPersistence("Cannot persist layout because the layout model is invalid.");
     return false;

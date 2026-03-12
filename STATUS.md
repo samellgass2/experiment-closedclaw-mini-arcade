@@ -1837,3 +1837,23 @@ Verdict: PASS
   - Updated `js/dashboard/component.js` to render the new stats tile type and treat **all** `isStatsTile` entries as non-playable/score-immutable.
   - Added the tile to the dashboard catalog/default layout in `js/game.js`; default order now starts with `global-high-scores`, `recent-plays-attempts`, `racing`, `clicker`.
 - Reactive refresh behavior is preserved through existing dashboard route handling (`component.refreshMetrics()` in `js/game.js`): after playing games and returning to `#dashboard`, both recent plays and total attempts are re-read from persistence and displayed with current values.
+
+## Task 434 - Stats Tiles as First-Class Persistent Layout Items
+
+- Updated the dashboard tile model to carry explicit tile type metadata (`tileType: "game" | "stats"`) in `js/dashboard/logic.js` while preserving a single `tileIds` ordering list and one shared grid renderer in `js/dashboard/component.js`.
+- Stats widgets are now represented in layout snapshots the same way as game tiles (same position/order model, same draggable list, same directional move API), but still render widget-specific content (`global-high-scores` and `recent-plays-attempts`) through their dedicated components.
+- Added stats-tile reordering controls in both widget components:
+  - `js/dashboard/highScoresTile.js`
+  - `js/dashboard/recentPlaysAttemptsTile.js`
+  These now emit the same directional actions used by game tiles (`move-left`, `move-right`, `move-up`, `move-down`).
+- Extended directional move handling so `moveDashboardTile(...)` accepts `up`/`down` in addition to `left`/`right` (`js/dashboard/logic.js`), ensuring consistent behavior for all tile types in the unified ordering model.
+- Layout persistence remains localStorage-backed and cross-session:
+  - `js/persistence.js` now persists `tileOrder` plus typed `tiles` entries (`{ id, tileType }`) under the same schema/storage key (`miniArcade.dashboard.layout.v1`).
+  - `js/game.js` now passes known tile type mappings and saves both ordered ids and typed tile metadata on dashboard changes.
+  - Loading remains backward-compatible with legacy `tileOrder` payloads and can also recover order from typed `tiles` payloads.
+- Regression validation:
+  - Existing game tiles still render, reorder, and persist as before.
+  - Added/updated tests:
+    - `tests/dashboard.logic.test.mjs` (stats tile typing + up/down directional move coverage)
+    - `tests/persistence.layout.test.mjs` (typed tiles persistence and load fallback/compatibility)
+  - Full suite pass: `node --test tests/*.mjs`.

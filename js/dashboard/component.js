@@ -1,4 +1,5 @@
 import {
+  DASHBOARD_TILE_TYPE,
   DASHBOARD_STATUS,
   addDashboardTile,
   createDashboardState,
@@ -210,7 +211,7 @@ export function createDashboardComponent(options = {}) {
 
   function isStatsTile(tileId) {
     const game = state.catalogById.get(tileId);
-    return Boolean(game?.isStatsTile);
+    return game?.tileType === DASHBOARD_TILE_TYPE.STATS;
   }
 
   function render() {
@@ -228,23 +229,24 @@ export function createDashboardComponent(options = {}) {
 
     ui.tileList.append(createDropSlot(0));
     for (const tile of snapshot.tiles) {
-      if (tile.id === HIGH_SCORES_TILE_ID) {
-        ui.tileList.append(
-          createHighScoresTileElement(tile, tile.position, snapshot.tileCount, {
+      let tileElement = null;
+      if (tile.tileType === DASHBOARD_TILE_TYPE.STATS) {
+        if (tile.id === HIGH_SCORES_TILE_ID) {
+          tileElement = createHighScoresTileElement(tile, tile.position, snapshot.tileCount, {
             maxItems: options.highScoresListLimit,
             metricsOptions: options.metricsOptions
-          })
-        );
-      } else if (tile.id === RECENT_PLAYS_ATTEMPTS_TILE_ID) {
-        ui.tileList.append(
-          createRecentPlaysAttemptsTileElement(tile, tile.position, snapshot.tileCount, {
+          });
+        } else if (tile.id === RECENT_PLAYS_ATTEMPTS_TILE_ID) {
+          tileElement = createRecentPlaysAttemptsTileElement(tile, tile.position, snapshot.tileCount, {
             maxItems: options.recentPlaysListLimit,
             metricsOptions: options.metricsOptions
-          })
-        );
-      } else {
-        ui.tileList.append(createGameTileElement(tile, tile.position, snapshot.tileCount));
+          });
+        }
       }
+      if (!tileElement) {
+        tileElement = createGameTileElement(tile, tile.position, snapshot.tileCount);
+      }
+      ui.tileList.append(tileElement);
       ui.tileList.append(createDropSlot(tile.position + 1));
     }
 
@@ -407,6 +409,24 @@ export function createDashboardComponent(options = {}) {
 
     if (action === "move-right") {
       const result = moveDashboardTile(state, tileId, "right");
+      commitActionFeedback(result, {
+        boardFeedbackClass: "is-feedback-move",
+        tileFeedbackClass: "is-feedback-moved"
+      });
+      return;
+    }
+
+    if (action === "move-up") {
+      const result = moveDashboardTile(state, tileId, "up");
+      commitActionFeedback(result, {
+        boardFeedbackClass: "is-feedback-move",
+        tileFeedbackClass: "is-feedback-moved"
+      });
+      return;
+    }
+
+    if (action === "move-down") {
+      const result = moveDashboardTile(state, tileId, "down");
       commitActionFeedback(result, {
         boardFeedbackClass: "is-feedback-move",
         tileFeedbackClass: "is-feedback-moved"

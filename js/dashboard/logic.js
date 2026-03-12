@@ -4,6 +4,11 @@ export const DASHBOARD_STATUS = {
   ERROR: "ERROR"
 };
 
+export const DASHBOARD_TILE_TYPE = {
+  GAME: "game",
+  STATS: "stats"
+};
+
 export const DASHBOARD_DEFAULT_CATALOG = [
   {
     id: "racing",
@@ -36,14 +41,24 @@ export const DASHBOARD_DEFAULT_CATALOG = [
 ];
 
 function cloneCatalogEntry(game) {
+  const tileType = normalizeTileType(game?.tileType, game?.isStatsTile);
   return {
     id: game.id,
     name: game.name,
     description: game.description,
     difficulty: game.difficulty,
     mode: game.mode,
-    isStatsTile: Boolean(game.isStatsTile)
+    tileType,
+    isStatsTile: tileType === DASHBOARD_TILE_TYPE.STATS
   };
+}
+
+function normalizeTileType(tileType, isStatsTile) {
+  if (tileType === DASHBOARD_TILE_TYPE.STATS || isStatsTile === true) {
+    return DASHBOARD_TILE_TYPE.STATS;
+  }
+
+  return DASHBOARD_TILE_TYPE.GAME;
 }
 
 function normalizeScore(value, fallback = 0) {
@@ -82,6 +97,7 @@ function normalizeCatalog(catalog) {
             ? item.difficulty
             : "Unknown",
         mode: typeof item.mode === "string" && item.mode.length > 0 ? item.mode : "Arcade",
+        tileType: normalizeTileType(item.tileType, item.isStatsTile),
         isStatsTile: Boolean(item.isStatsTile)
       })
     );
@@ -352,7 +368,12 @@ export function moveDashboardTile(state, tileId, direction) {
     return createResult(false, state, "tile-not-found");
   }
 
-  const offset = direction === "left" ? -1 : direction === "right" ? 1 : 0;
+  const offset =
+    direction === "left" || direction === "up"
+      ? -1
+      : direction === "right" || direction === "down"
+        ? 1
+        : 0;
   const targetIndex = currentIndex + offset;
   if (offset === 0) {
     state.lastAction = {
@@ -419,6 +440,7 @@ export function getDashboardSnapshot(state) {
   const tiles = state.tileIds.map((tileId, index) => {
     const game = findCatalogGame(state, tileId);
     const score = state.scoresByTileId.get(tileId) ?? 0;
+    const tileType = game?.tileType ?? DASHBOARD_TILE_TYPE.GAME;
     return {
       id: tileId,
       position: index,
@@ -426,6 +448,8 @@ export function getDashboardSnapshot(state) {
       description: game ? game.description : "",
       difficulty: game ? game.difficulty : "",
       mode: game ? game.mode : "",
+      tileType,
+      isStatsTile: tileType === DASHBOARD_TILE_TYPE.STATS,
       score
     };
   });

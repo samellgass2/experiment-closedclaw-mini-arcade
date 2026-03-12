@@ -45,15 +45,24 @@ function testLoadFallbackToDefaultWithoutStoredLayout() {
 
 function testSaveAndLoadLayoutRoundTrip() {
   const storage = createMemoryStorage();
-  const knownTileIds = ["racing", "clicker", "color-match", "anomaly"];
+  const knownTileIds = ["global-high-scores", "recent-plays-attempts", "racing", "clicker", "color-match", "anomaly"];
+  const knownTileTypes = {
+    "global-high-scores": "stats",
+    "recent-plays-attempts": "stats",
+    racing: "game",
+    clicker: "game",
+    "color-match": "game",
+    anomaly: "game"
+  };
 
   const saved = saveLayout(
     {
-      tileOrder: ["clicker", "clicker", "anomaly", "unknown"]
+      tileOrder: ["global-high-scores", "clicker", "clicker", "anomaly", "unknown"]
     },
     {
       storage,
-      knownTileIds
+      knownTileIds,
+      knownTileTypes
     }
   );
 
@@ -61,15 +70,21 @@ function testSaveAndLoadLayoutRoundTrip() {
 
   const parsed = JSON.parse(storage.getItem(LAYOUT_STORAGE_KEY));
   assert.equal(parsed.version, LAYOUT_SCHEMA_VERSION);
-  assert.deepEqual(parsed.tileOrder, ["clicker", "anomaly"]);
+  assert.deepEqual(parsed.tileOrder, ["global-high-scores", "clicker", "anomaly"]);
+  assert.deepEqual(parsed.tiles, [
+    { id: "global-high-scores", tileType: "stats" },
+    { id: "clicker", tileType: "game" },
+    { id: "anomaly", tileType: "game" }
+  ]);
 
   const loaded = loadLayout({
     storage,
-    defaultTileOrder: ["racing", "clicker"],
-    knownTileIds
+    defaultTileOrder: ["global-high-scores", "racing", "clicker"],
+    knownTileIds,
+    knownTileTypes
   });
 
-  assert.deepEqual(loaded, ["clicker", "anomaly"]);
+  assert.deepEqual(loaded, ["global-high-scores", "clicker", "anomaly"]);
 }
 
 function testLoadFallbackOnMalformedJson() {
@@ -105,6 +120,30 @@ function testLoadFallbackOnOlderSchema() {
   });
 
   assert.deepEqual(loaded, ["racing", "clicker"]);
+}
+
+function testLoadLayoutFromTypedTilesOnly() {
+  const storage = createMemoryStorage({
+    initialValues: {
+      [LAYOUT_STORAGE_KEY]: JSON.stringify({
+        version: LAYOUT_SCHEMA_VERSION,
+        tiles: [
+          { id: "global-high-scores", tileType: "stats" },
+          { id: "clicker", tileType: "game" },
+          { id: "clicker", tileType: "game" },
+          { id: "unknown", tileType: "stats" }
+        ]
+      })
+    }
+  });
+
+  const loaded = loadLayout({
+    storage,
+    defaultTileOrder: ["global-high-scores", "racing", "clicker"],
+    knownTileIds: ["global-high-scores", "recent-plays-attempts", "racing", "clicker"]
+  });
+
+  assert.deepEqual(loaded, ["global-high-scores", "clicker"]);
 }
 
 function testStorageFailuresGracefullyFallback() {
@@ -147,6 +186,7 @@ function run() {
   testSaveAndLoadLayoutRoundTrip();
   testLoadFallbackOnMalformedJson();
   testLoadFallbackOnOlderSchema();
+  testLoadLayoutFromTypedTilesOnly();
   testStorageFailuresGracefullyFallback();
   testResetLayout();
   console.log("persistence.layout.test: ok");

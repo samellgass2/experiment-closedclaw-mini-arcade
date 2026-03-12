@@ -27,6 +27,37 @@ function formatScore(value) {
   return (Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0).toLocaleString("en-US");
 }
 
+function createReorderControls(tileTitle, index, tileCount) {
+  const controls = createNode("div", "tile-controls");
+
+  const moveLeftButton = createNode("button", "tile-button tile-button-secondary", "Move Left");
+  moveLeftButton.type = "button";
+  moveLeftButton.dataset.action = "move-left";
+  moveLeftButton.disabled = index === 0;
+  moveLeftButton.setAttribute("aria-label", `Move ${tileTitle} tile left`);
+
+  const moveRightButton = createNode("button", "tile-button tile-button-secondary", "Move Right");
+  moveRightButton.type = "button";
+  moveRightButton.dataset.action = "move-right";
+  moveRightButton.disabled = index === tileCount - 1;
+  moveRightButton.setAttribute("aria-label", `Move ${tileTitle} tile right`);
+
+  const moveUpButton = createNode("button", "tile-button tile-button-secondary", "Move Up");
+  moveUpButton.type = "button";
+  moveUpButton.dataset.action = "move-up";
+  moveUpButton.disabled = index === 0;
+  moveUpButton.setAttribute("aria-label", `Move ${tileTitle} tile up`);
+
+  const moveDownButton = createNode("button", "tile-button tile-button-secondary", "Move Down");
+  moveDownButton.type = "button";
+  moveDownButton.dataset.action = "move-down";
+  moveDownButton.disabled = index === tileCount - 1;
+  moveDownButton.setAttribute("aria-label", `Move ${tileTitle} tile down`);
+
+  controls.append(moveLeftButton, moveRightButton, moveUpButton, moveDownButton);
+  return controls;
+}
+
 export function createHighScoresTileElement(tile, index, tileCount, options = {}) {
   const maxItems = toPositiveInteger(options.maxItems, DEFAULT_MAX_ITEMS);
   const tileTitle =
@@ -71,6 +102,6 @@ export function createHighScoresTileElement(tile, index, tileCount, options = {}
     }
   }
 
-  item.append(headingRow, summary, scorePanel, list);
+  item.append(headingRow, summary, scorePanel, list, createReorderControls(tileTitle, index, tileCount));
   return item;
 }
