@@ -12,6 +12,7 @@ import {
   resetClickerState,
   getClickerSnapshot
 } from "../js/clicker/logic.js";
+import { getRecentPlays, getTotalAttempts } from "../js/persistence.js";
 
 function createMemoryStorage() {
   return {
@@ -184,6 +185,23 @@ function testBestScoreLoadsFromStorageOnNewSession() {
   assert.equal(second.bestScore, first.bestScore, "best score should be restored from storage");
 }
 
+function testFinishingGamePersistsRecentPlayAndAttemptsMetrics() {
+  const storage = createMemoryStorage();
+  const state = createClickerState({ autoStartOnClick: false }, { storage });
+
+  startClickerGame(state, 0);
+  registerClick(state, 50);
+  finishClickerGame(state, 200, "manual-stop");
+
+  const recent = getRecentPlays(5, { storage });
+  const attempts = getTotalAttempts({ storage });
+
+  assert.equal(recent.length >= 1, true);
+  assert.equal(recent[0].gameName, "Combo Clicker");
+  assert.equal(typeof recent[0].playedAt, "string");
+  assert.equal(attempts >= 1, true);
+}
+
 function run() {
   testAutoStartAndScoreTracking();
   testPauseResumeAndRejectedClicks();
@@ -191,6 +209,7 @@ function run() {
   testCountdownTicksToZeroAndStopsGame();
   testPausePreservesCountdownUntilResume();
   testBestScoreLoadsFromStorageOnNewSession();
+  testFinishingGamePersistsRecentPlayAndAttemptsMetrics();
   console.log("clicker.logic.test: ok");
 }
 
