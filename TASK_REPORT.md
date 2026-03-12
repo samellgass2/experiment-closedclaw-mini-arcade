@@ -1,32 +1,56 @@
-# Task Report: TASK_ID=431 RUN_ID=764
+# TASK REPORT
+
+## Task
+- TASK_ID: 432
+- RUN_ID: 765
+- Title: Implement global high scores stats tile
 
 ## Summary
-Extended the shared persistence module with cross-game metrics helpers for stats widgets: global high scores, recent plays, and total attempts.
+Implemented a dedicated non-game dashboard tile for global high scores and integrated it into the existing dashboard tile grid using the same tile chrome classes as game tiles.
 
-## Implementation
-- Updated `js/persistence.js` to add:
-  - `getGlobalHighScores(options?)`
-  - `getRecentPlays(limit?, options?)`
-  - `getTotalAttempts(options?)`
-- Added robust parsing/normalization for:
-  - existing scalar best-value keys already written by games,
-  - optional per-game summary/history JSON payloads,
-  - malformed/missing storage data without throwing.
-- Added API comments documenting return shapes and widget-oriented usage.
+## Changes Made
+1. Added `js/dashboard/highScoresTile.js`:
+- New dedicated stats tile renderer for global high scores.
+- Uses shared persistence helper `getGlobalHighScores(...)`.
+- Shows per-game best scores (capped to top 6 entries).
+- Shows explicit empty state when no score data exists.
+
+2. Updated `js/dashboard/component.js`:
+- Renders the high scores tile inside the same board/grid flow as other tiles.
+- Prevents stats tile click-to-play navigation.
+- Added `refreshMetrics()` API to force re-render of stats data.
+
+3. Updated `js/game.js`:
+- Added fixed layout tile id `global-high-scores` into dashboard catalog/order.
+- Included stats tile id in persisted `knownTileIds` and default tile order.
+- Calls `component.refreshMetrics()` when returning to dashboard route so high scores update without full reload.
+
+4. Updated `js/dashboard/logic.js`:
+- Added `isStatsTile` metadata support on catalog entries.
+- Excluded stats tiles from add-tile catalog controls.
+- Updated `availableCount` to use filtered addable games.
+
+5. Updated `css/styles.css`:
+- Added styles for stats list rows and empty-state message while preserving existing responsive grid/tile behavior.
+
+6. Updated `js/dashboard/index.js` export surface.
+
+7. Updated `STATUS.md` with task entry describing:
+- New high scores widget,
+- Layout placement (`global-high-scores` default slot),
+- Reactive refresh behavior when returning from gameplay.
+
+## Acceptance Criteria Check
+1. Dedicated stats tile exists and is wired into dashboard grid with existing tile chrome: PASS
+2. Widget lists each game with recorded results and best score via shared persistence helpers: PASS
+3. Empty-state message renders when no results exist: PASS
+4. Dashboard route refresh updates tile after gameplay without full reload: PASS
+5. Tile respects existing grid/layout responsiveness and persistence flow: PASS
+6. STATUS.md updated with widget behavior and reactive notes: PASS
 
 ## Validation
-- Ran full suite: `node --test tests/*.mjs`
-- Result: PASS (`10` passed, `0` failed)
-- Added `tests/persistence.metrics.test.mjs` covering:
-  - empty storage defaults,
-  - per-game + overall high score aggregation,
-  - recent-play ordering and limit behavior,
-  - total-attempts aggregation,
-  - malformed data safety.
+- Command run: `node --test tests/*.mjs`
+- Result: PASS (10/10 test files)
 
-## Acceptance Results
-1. Persistence module now exposes global metrics helpers with clear names.
-2. Helpers derive from existing per-game localStorage payloads (scalar score keys plus optional summaries/histories) without game save-logic changes.
-3. No-data scenarios return sensible empty values (`[]`, `null`, `0`) and do not throw.
-4. API behavior/return shapes documented in module comments.
-5. `STATUS.md` updated with a Task 431 section describing helper usage for widget tiles.
+## Commit
+- `e6124d1` task/432: add global high scores dashboard tile
