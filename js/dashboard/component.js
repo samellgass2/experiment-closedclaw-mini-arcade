@@ -10,6 +10,10 @@ import {
 } from "./logic.js";
 import { createGameTileElement, updateGameTileElementScore } from "./gameTile.js";
 import { createHighScoresTileElement, HIGH_SCORES_TILE_ID } from "./highScoresTile.js";
+import {
+  createRecentPlaysAttemptsTileElement,
+  RECENT_PLAYS_ATTEMPTS_TILE_ID
+} from "./recentPlaysAttemptsTile.js";
 
 const FEEDBACK_LIMIT = 4;
 const FEEDBACK_RESET_MS = 780;
@@ -204,6 +208,11 @@ export function createDashboardComponent(options = {}) {
     }
   }
 
+  function isStatsTile(tileId) {
+    const game = state.catalogById.get(tileId);
+    return Boolean(game?.isStatsTile);
+  }
+
   function render() {
     const snapshot = getDashboardSnapshot(state);
     updateStatusBanner(ui.status, snapshot);
@@ -222,7 +231,15 @@ export function createDashboardComponent(options = {}) {
       if (tile.id === HIGH_SCORES_TILE_ID) {
         ui.tileList.append(
           createHighScoresTileElement(tile, tile.position, snapshot.tileCount, {
-            maxItems: options.highScoresListLimit
+            maxItems: options.highScoresListLimit,
+            metricsOptions: options.metricsOptions
+          })
+        );
+      } else if (tile.id === RECENT_PLAYS_ATTEMPTS_TILE_ID) {
+        ui.tileList.append(
+          createRecentPlaysAttemptsTileElement(tile, tile.position, snapshot.tileCount, {
+            maxItems: options.recentPlaysListLimit,
+            metricsOptions: options.metricsOptions
           })
         );
       } else {
@@ -363,7 +380,7 @@ export function createDashboardComponent(options = {}) {
     const action = button.dataset.action;
     if (action === "play") {
       if (typeof options.onPlayTile === "function") {
-        if (tileId === HIGH_SCORES_TILE_ID) {
+        if (isStatsTile(tileId)) {
           return;
         }
         options.onPlayTile(tileId);
@@ -412,7 +429,7 @@ export function createDashboardComponent(options = {}) {
       return;
     }
 
-    if (tileElement.dataset.tileId === HIGH_SCORES_TILE_ID) {
+    if (isStatsTile(tileElement.dataset.tileId)) {
       return;
     }
 
@@ -532,7 +549,7 @@ export function createDashboardComponent(options = {}) {
   }
 
   function setGameScore(tileId, score) {
-    if (tileId === HIGH_SCORES_TILE_ID) {
+    if (isStatsTile(tileId)) {
       return { accepted: false, reason: "stats-tile-score-immutable" };
     }
 

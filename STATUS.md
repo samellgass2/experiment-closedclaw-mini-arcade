@@ -1818,3 +1818,22 @@ Verdict: PASS
 - The widget lists each game with recorded data and its best score, capped to a readable list size (top 6). If no game has stored scores, it renders an explicit empty state message: "No high scores yet. Play a game to generate stats."
 - Added dashboard route refresh behavior (`component.refreshMetrics()`) in `js/game.js` so when gameplay ends and the user returns to the dashboard, the high scores tile re-reads persistence-backed global metrics and shows updated best scores without a full page reload.
 - Added focused styles in `css/styles.css` for stats rows/empty state while preserving existing responsive tile/grid behavior for small and large viewports.
+
+## Task 433 - Recent Plays and Total Attempts Stats Tile
+
+- Added a new dashboard stats widget at `js/dashboard/recentPlaysAttemptsTile.js` with tile id `recent-plays-attempts`. The tile uses the same chrome/layout classes and slot integration as `global-high-scores` (`dashboard-tile`, `tile-heading-row`, `tile-title`, `tile-position`, `tile-score`) so it behaves like any other draggable board tile.
+- The widget is backed by shared persistence helpers in `js/persistence.js`:
+  - `getRecentPlays(limit, options)` for cross-game recent activity rows.
+  - `getTotalAttempts(options)` for aggregate attempt count across all games.
+- Default recent-play list size is **5** (`DASHBOARD_RECENT_PLAYS_LIMIT` in `js/game.js`, passed through `recentPlaysListLimit`; tile fallback constant is `DEFAULT_MAX_RECENT_ITEMS = 5`).
+- Rendering behavior:
+  - Shows the N most recent plays with game name and a human-friendly relative timestamp (`just now`, `x minutes ago`, `x hours ago`, etc.), with an absolute timestamp in the `<time>` title.
+  - Shows a clearly labeled `Total Attempts` metric and number formatting using `en-US` separators.
+- Empty-state behavior:
+  - No recent history: `No recent plays yet. Finish a game session to populate activity.`
+  - Zero attempts: `No attempts recorded yet.`
+- Dashboard integration updates:
+  - Exported the new tile module from `js/dashboard/index.js`.
+  - Updated `js/dashboard/component.js` to render the new stats tile type and treat **all** `isStatsTile` entries as non-playable/score-immutable.
+  - Added the tile to the dashboard catalog/default layout in `js/game.js`; default order now starts with `global-high-scores`, `recent-plays-attempts`, `racing`, `clicker`.
+- Reactive refresh behavior is preserved through existing dashboard route handling (`component.refreshMetrics()` in `js/game.js`): after playing games and returning to `#dashboard`, both recent plays and total attempts are re-read from persistence and displayed with current values.

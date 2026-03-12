@@ -1,5 +1,6 @@
 import { createDashboardComponent, DASHBOARD_DEFAULT_CATALOG } from "./dashboard/index.js";
 import { HIGH_SCORES_TILE_ID } from "./dashboard/highScoresTile.js";
+import { RECENT_PLAYS_ATTEMPTS_TILE_ID } from "./dashboard/recentPlaysAttemptsTile.js";
 import { mountRuntimeForGame } from "./gameRuntimes.js";
 import { getActiveGameLoop, startGameLoop, stopActiveGameLoop } from "./gameLoopManager.js";
 import { createGameView } from "./gameView.js";
@@ -12,6 +13,7 @@ const DEV_MODE =
     window.location?.hostname === "127.0.0.1" ||
     window.location?.hostname === "" ||
     window.location?.protocol === "file:");
+const DASHBOARD_RECENT_PLAYS_LIMIT = 5;
 
 function devLifecycleLog(message, details) {
   if (!DEV_MODE) {
@@ -47,12 +49,20 @@ function initializeDashboard() {
       mode: "Stats",
       isStatsTile: true
     },
+    {
+      id: RECENT_PLAYS_ATTEMPTS_TILE_ID,
+      name: "Recent Plays & Attempts",
+      description: "Latest arcade sessions and total attempts across all games.",
+      difficulty: "All Modes",
+      mode: "Stats",
+      isStatsTile: true
+    },
     ...DASHBOARD_DEFAULT_CATALOG
   ];
 
   const catalogById = new Map(dashboardCatalog.map((game) => [game.id, game]));
   const knownTileIds = dashboardCatalog.map((game) => game.id);
-  const defaultTileOrder = [HIGH_SCORES_TILE_ID, "racing", "clicker"];
+  const defaultTileOrder = [HIGH_SCORES_TILE_ID, RECENT_PLAYS_ATTEMPTS_TILE_ID, "racing", "clicker"];
   const initialTileIds = loadLayout({
     defaultTileOrder,
     knownTileIds
@@ -89,6 +99,7 @@ function initializeDashboard() {
     catalog: dashboardCatalog,
     initialTileIds,
     maxTiles: dashboardCatalog.length,
+    recentPlaysListLimit: DASHBOARD_RECENT_PLAYS_LIMIT,
     onChange: (snapshot) => persistLayoutFromSnapshot(snapshot),
     onPlayTile: (gameId) => navigateToGame(gameId)
   });
