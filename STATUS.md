@@ -55,6 +55,36 @@ Implemented robust dashboard tile layout persistence with versioned schema valid
 ## Task 383 Update (RUN_ID 683)
 Validated hardened dashboard routing, lifecycle management, and layout persistence together through a browser-driven end-to-end pass.
 
+## Task 431 Update (RUN_ID 764)
+Extended `js/persistence.js` with reusable global arcade metrics helpers that aggregate existing per-game storage data for dashboard stats widgets.
+
+### New Global Metrics API
+- `getGlobalHighScores(options?)`
+  - Returns `{ perGame, overall }`.
+  - `perGame` contains `{ gameId, gameName, highScore }` entries sorted by score.
+  - `overall` is the top entry or `null` when no persisted score data exists.
+- `getRecentPlays(limit?, options?)`
+  - Returns recent cross-game play records with `{ gameId, gameName, score, playedAt }`.
+  - `playedAt` is an ISO timestamp; records are sorted newest-first.
+- `getTotalAttempts(options?)`
+  - Returns a numeric sum of attempt counts across games.
+  - Attempts come from per-game summary counters when present, with history-length fallback.
+
+### Data Sources and Compatibility
+- Helpers are read-only aggregators over existing localStorage persistence payloads:
+  - Scalar best-value keys already written by games (for example: anomaly/clicker/color-match best score keys and racing best-lap key).
+  - Optional per-game summary/history JSON payloads when present.
+- No game save logic changes were required to expose these metrics.
+- Defensive parsing and storage guards ensure malformed or missing payloads are ignored safely.
+
+### Verification (Task 431)
+- Added `tests/persistence.metrics.test.mjs` covering:
+  - empty storage defaults (`[]`, `null`, `0`)
+  - scalar + summary high-score aggregation
+  - recent-play ordering across games
+  - attempt totals from summary counters/history lengths
+  - malformed JSON safety behavior
+
 ### Validation Scope and Method
 - Served app as static site via:
   - `python3 -m http.server 8000`
