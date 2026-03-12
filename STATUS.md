@@ -1857,3 +1857,43 @@ Verdict: PASS
     - `tests/dashboard.logic.test.mjs` (stats tile typing + up/down directional move coverage)
     - `tests/persistence.layout.test.mjs` (typed tiles persistence and load fallback/compatibility)
   - Full suite pass: `node --test tests/*.mjs`.
+
+## Tester Report (Workflow #44, 2026-03-12 UTC)
+
+### Tests Run
+- Command: `node --version && node --test tests/*.mjs`
+- Node: `v22.22.1`
+- Result: PASS
+  - `# tests 10`
+  - `# pass 10`
+  - `# fail 0`
+  - `# duration_ms 793.400692`
+
+### Acceptance Verification
+- Task #431 (Extend persistence with global arcade metrics): PASS
+  - Verified `getGlobalHighScores(options?)`, `getRecentPlays(limit?, options?)`, and `getTotalAttempts(options?)` are exported from `js/persistence.js`.
+  - Verified metrics derive from existing scalar/summary/history storage keys with defensive malformed-data handling and sensible empty defaults.
+  - Verified API return-shape documentation comments are present in code.
+  - Verified `STATUS.md` includes task entry and explicitly states no game save-logic changes were required.
+- Task #432 (Implement global high scores stats tile): PASS
+  - Verified dedicated stats tile component exists (`js/dashboard/highScoresTile.js`) and uses dashboard tile chrome classes.
+  - Verified empty state rendering and per-game score list behavior.
+  - Verified dashboard integration in shared grid/layout (`js/game.js`, `js/dashboard/component.js`) and reactive refresh path (`component.refreshMetrics()` on dashboard route).
+  - Verified responsive tile/grid CSS exists for small and large viewports (`css/styles.css`).
+- Task #433 (Implement recent plays and total attempts tile): PASS
+  - Verified dedicated combined stats tile exists (`js/dashboard/recentPlaysAttemptsTile.js`) with shared tile chrome and grid integration.
+  - Verified rendering of recent plays (game name + relative/absolute time), total attempts metric, and empty states.
+  - Verified default recent-play count is configured and documented (`DASHBOARD_RECENT_PLAYS_LIMIT = 5` in `js/game.js`; fallback constant in tile module).
+  - Verified reactive refresh path through dashboard route metric refresh.
+- Task #434 (Wire stats tiles into dashboard layout persistence): PASS
+  - Verified layout model includes stats tiles as first-class typed entries (`tileType: "stats"`) in unified ordering/rendering pipeline.
+  - Verified directional move controls and handlers apply to stats tiles the same as game tiles.
+  - Verified localStorage persistence includes typed tile entries and remains backward-compatible (`js/persistence.js`, `js/game.js`).
+  - Verified regression coverage via layout/dashboard logic tests and full suite pass.
+
+### Bugs Filed
+- None.
+
+### Integration / Regression Verdict
+- Stats widgets, shared persistence metrics, and persisted dashboard layout operate as one cohesive feature in this branch.
+- Overall verdict: CLEAN
