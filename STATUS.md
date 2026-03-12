@@ -1897,3 +1897,42 @@ Verdict: PASS
 ### Integration / Regression Verdict
 - Stats widgets, shared persistence metrics, and persisted dashboard layout operate as one cohesive feature in this branch.
 - Overall verdict: CLEAN
+
+## Tester Report (Workflow #44 Retest, 2026-03-12 UTC)
+
+### Tests Run and Results
+1. `cat package.json | sed -n '/"scripts"/,/}/p'`
+   - Result: `cat: package.json: No such file or directory` (no npm manifest/scripts in this repo)
+2. `node --version && node --test tests/*.mjs`
+   - Node: `v22.22.1`
+   - Result: PASS (`# tests 10`, `# pass 10`, `# fail 0`)
+
+### Per-Task Acceptance Verdict
+- Task #431: PASS
+  - `js/persistence.js` exports `getGlobalHighScores`, `getRecentPlays`, `getTotalAttempts`.
+  - Helpers aggregate from existing per-game scalar/summary/history localStorage shapes with defensive malformed-data handling and empty defaults.
+  - API return-shape comments are present above each helper.
+  - `STATUS.md` contains Task 431 update and notes no game save-logic changes required.
+- Task #432: PASS
+  - Dedicated high-scores stats tile exists at `js/dashboard/highScoresTile.js` and uses standard dashboard tile chrome classes.
+  - Non-empty and empty states are implemented.
+  - Tile is wired into dashboard catalog/layout and participates in unified grid rendering/reordering.
+  - Reactive refresh is wired via dashboard-route `component.refreshMetrics()` in `js/game.js`.
+- Task #433: PASS
+  - Combined recent-plays/total-attempts tile exists at `js/dashboard/recentPlaysAttemptsTile.js`.
+  - Displays recent plays with game name + relative/absolute time and total attempts from shared persistence helpers.
+  - Graceful empty states exist for both recent plays and attempts.
+  - Default recent-play count is 5 (`DASHBOARD_RECENT_PLAYS_LIMIT` in `js/game.js`; `DEFAULT_MAX_RECENT_ITEMS = 5` fallback).
+  - Reactive refresh path is present on dashboard navigation.
+- Task #434: PASS
+  - Stats tiles are first-class entries in catalog/default order and layout persistence (`global-high-scores`, `recent-plays-attempts`).
+  - Unified tile model supports both `tileType: "game"` and `tileType: "stats"` with shared move/reposition controls.
+  - Cross-session persistence remains localStorage-backed and tested for typed tile entries and compatibility fallback.
+  - Existing game tile behaviors remain covered by passing dashboard/layout tests.
+
+### Bugs Filed
+- None.
+
+### Integration Verdict
+- Overall verdict: CLEAN
+- The stats widgets, global metrics helpers, and persisted unified dashboard layout work together cohesively with no observed regressions.
