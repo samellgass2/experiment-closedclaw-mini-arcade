@@ -1810,3 +1810,11 @@ Verdict: PASS
 - Routing is centralized and hash-route resilient.
 - Loop lifecycle is single-active and teardown-safe across route transitions.
 - Layout persistence is versioned, resilient to corruption/storage failure, and falls back cleanly.
+
+## Task 432 - Global High Scores Stats Tile
+
+- Added a dedicated dashboard stats tile component at `js/dashboard/highScoresTile.js` that uses shared persistence helper `getGlobalHighScores(...)` and renders inside the same tile chrome classes used by game tiles (`dashboard-tile`, `tile-heading-row`, `tile-title`, `tile-position`, and `tile-score`).
+- Integrated the tile into the dashboard layout configuration by introducing a fixed tile id (`global-high-scores`) in `js/game.js` and adding it to the persisted/known tile order. The default order is now `global-high-scores`, `racing`, `clicker`.
+- The widget lists each game with recorded data and its best score, capped to a readable list size (top 6). If no game has stored scores, it renders an explicit empty state message: "No high scores yet. Play a game to generate stats."
+- Added dashboard route refresh behavior (`component.refreshMetrics()`) in `js/game.js` so when gameplay ends and the user returns to the dashboard, the high scores tile re-reads persistence-backed global metrics and shows updated best scores without a full page reload.
+- Added focused styles in `css/styles.css` for stats rows/empty state while preserving existing responsive tile/grid behavior for small and large viewports.

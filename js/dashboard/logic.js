@@ -41,7 +41,8 @@ function cloneCatalogEntry(game) {
     name: game.name,
     description: game.description,
     difficulty: game.difficulty,
-    mode: game.mode
+    mode: game.mode,
+    isStatsTile: Boolean(game.isStatsTile)
   };
 }
 
@@ -80,7 +81,8 @@ function normalizeCatalog(catalog) {
           typeof item.difficulty === "string" && item.difficulty.length > 0
             ? item.difficulty
             : "Unknown",
-        mode: typeof item.mode === "string" && item.mode.length > 0 ? item.mode : "Arcade"
+        mode: typeof item.mode === "string" && item.mode.length > 0 ? item.mode : "Arcade",
+        isStatsTile: Boolean(item.isStatsTile)
       })
     );
   }
@@ -165,7 +167,7 @@ export function createDashboardState(options = {}) {
 }
 
 export function getDashboardAvailableGames(state) {
-  return state.catalog.filter((game) => !state.tileIds.includes(game.id));
+  return state.catalog.filter((game) => !game.isStatsTile && !state.tileIds.includes(game.id));
 }
 
 export function addDashboardTile(state, tileId, insertionIndex = state.tileIds.length) {
@@ -431,7 +433,7 @@ export function getDashboardSnapshot(state) {
   return {
     tileIds: [...state.tileIds],
     tileCount: state.tileIds.length,
-    availableCount: state.catalog.length - state.tileIds.length,
+    availableCount: getDashboardAvailableGames(state).length,
     maxTiles: state.maxTiles,
     canAddMoreTiles: state.tileIds.length < state.maxTiles,
     tiles,

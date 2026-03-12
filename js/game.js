@@ -1,4 +1,5 @@
 import { createDashboardComponent, DASHBOARD_DEFAULT_CATALOG } from "./dashboard/index.js";
+import { HIGH_SCORES_TILE_ID } from "./dashboard/highScoresTile.js";
 import { mountRuntimeForGame } from "./gameRuntimes.js";
 import { getActiveGameLoop, startGameLoop, stopActiveGameLoop } from "./gameLoopManager.js";
 import { createGameView } from "./gameView.js";
@@ -37,9 +38,21 @@ function initializeDashboard() {
     throw new Error("Missing required app view root elements.");
   }
 
-  const catalogById = new Map(DASHBOARD_DEFAULT_CATALOG.map((game) => [game.id, game]));
-  const knownTileIds = DASHBOARD_DEFAULT_CATALOG.map((game) => game.id);
-  const defaultTileOrder = ["racing", "clicker"];
+  const dashboardCatalog = [
+    {
+      id: HIGH_SCORES_TILE_ID,
+      name: "Global High Scores",
+      description: "Cross-game leaderboard based on stored best scores.",
+      difficulty: "All Modes",
+      mode: "Stats",
+      isStatsTile: true
+    },
+    ...DASHBOARD_DEFAULT_CATALOG
+  ];
+
+  const catalogById = new Map(dashboardCatalog.map((game) => [game.id, game]));
+  const knownTileIds = dashboardCatalog.map((game) => game.id);
+  const defaultTileOrder = [HIGH_SCORES_TILE_ID, "racing", "clicker"];
   const initialTileIds = loadLayout({
     defaultTileOrder,
     knownTileIds
@@ -73,9 +86,9 @@ function initializeDashboard() {
 
   const component = createDashboardComponent({
     root: dashboardRoot,
-    catalog: DASHBOARD_DEFAULT_CATALOG,
+    catalog: dashboardCatalog,
     initialTileIds,
-    maxTiles: DASHBOARD_DEFAULT_CATALOG.length,
+    maxTiles: dashboardCatalog.length,
     onChange: (snapshot) => persistLayoutFromSnapshot(snapshot),
     onPlayTile: (gameId) => navigateToGame(gameId)
   });
@@ -108,6 +121,7 @@ function initializeDashboard() {
       if (route.view === "dashboard") {
         gameHost.unmountActiveGame();
         stopActiveGameLoop("navigated-dashboard");
+        component.refreshMetrics();
 
         const active = getActiveGameLoop();
         if (DEV_MODE && active) {
@@ -130,6 +144,7 @@ function initializeDashboard() {
   window.__MINI_ARCADE_DASHBOARD__ = {
     getSnapshot: component.getSnapshot,
     setGameScore: component.setGameScore,
+    refreshMetrics: component.refreshMetrics,
     resetLayout: () => {
       resetLayout();
       lastPersistedTileIds = [];

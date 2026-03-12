@@ -9,6 +9,7 @@ import {
   updateDashboardTileScore
 } from "./logic.js";
 import { createGameTileElement, updateGameTileElementScore } from "./gameTile.js";
+import { createHighScoresTileElement, HIGH_SCORES_TILE_ID } from "./highScoresTile.js";
 
 const FEEDBACK_LIMIT = 4;
 const FEEDBACK_RESET_MS = 780;
@@ -218,7 +219,15 @@ export function createDashboardComponent(options = {}) {
 
     ui.tileList.append(createDropSlot(0));
     for (const tile of snapshot.tiles) {
-      ui.tileList.append(createGameTileElement(tile, tile.position, snapshot.tileCount));
+      if (tile.id === HIGH_SCORES_TILE_ID) {
+        ui.tileList.append(
+          createHighScoresTileElement(tile, tile.position, snapshot.tileCount, {
+            maxItems: options.highScoresListLimit
+          })
+        );
+      } else {
+        ui.tileList.append(createGameTileElement(tile, tile.position, snapshot.tileCount));
+      }
       ui.tileList.append(createDropSlot(tile.position + 1));
     }
 
@@ -354,6 +363,9 @@ export function createDashboardComponent(options = {}) {
     const action = button.dataset.action;
     if (action === "play") {
       if (typeof options.onPlayTile === "function") {
+        if (tileId === HIGH_SCORES_TILE_ID) {
+          return;
+        }
         options.onPlayTile(tileId);
       }
       return;
@@ -397,6 +409,10 @@ export function createDashboardComponent(options = {}) {
 
     const tileElement = target.closest(".dashboard-tile");
     if (!(tileElement instanceof HTMLElement) || !tileElement.dataset.tileId) {
+      return;
+    }
+
+    if (tileElement.dataset.tileId === HIGH_SCORES_TILE_ID) {
       return;
     }
 
@@ -516,6 +532,10 @@ export function createDashboardComponent(options = {}) {
   }
 
   function setGameScore(tileId, score) {
+    if (tileId === HIGH_SCORES_TILE_ID) {
+      return { accepted: false, reason: "stats-tile-score-immutable" };
+    }
+
     const result = updateDashboardTileScore(state, tileId, score);
     const snapshot = getDashboardSnapshot(state);
     updateStatusBanner(ui.status, snapshot);
@@ -559,6 +579,7 @@ export function createDashboardComponent(options = {}) {
   return {
     state,
     render,
+    refreshMetrics: () => render(),
     getSnapshot: () => getDashboardSnapshot(state),
     setGameScore
   };

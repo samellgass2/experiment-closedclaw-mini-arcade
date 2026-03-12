@@ -459,6 +459,47 @@ body {
   text-transform: none;
 }
 
+.dashboard-stats-label {
+  font-size: 0.8rem;
+}
+
+.dashboard-stats-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+
+.dashboard-stats-item,
+.dashboard-stats-empty {
+  border: 1px solid #d7e3ed;
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: #f8fbff;
+}
+
+.dashboard-stats-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dashboard-stats-empty {
+  color: #466173;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.dashboard-stats-game {
+  color: #1a3850;
+}
+
+.dashboard-stats-score {
+  color: #0f2333;
+}
+
 .tile-controls {
   display: flex;
   gap: 6px;
