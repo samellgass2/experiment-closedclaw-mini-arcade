@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  DASHBOARD_TILE_TYPE,
   DASHBOARD_STATUS,
   addDashboardTile,
   createDashboardState,
@@ -102,24 +103,44 @@ function testRepositionTileByInsertionIndex() {
 }
 
 function testDirectionalMoveAndSnapshot() {
+  const catalog = [
+    {
+      id: "global-high-scores",
+      name: "Global High Scores",
+      description: "Stats tile",
+      difficulty: "All Modes",
+      mode: "Stats",
+      tileType: "stats",
+      isStatsTile: true
+    },
+    ...createDashboardState().catalog
+  ];
+
   const state = createDashboardState({
-    initialTileIds: ["racing", "clicker", "color-match"]
+    catalog,
+    initialTileIds: ["global-high-scores", "racing", "clicker", "color-match"]
   });
 
-  const leftEdge = moveDashboardTile(state, "racing", "left");
+  const leftEdge = moveDashboardTile(state, "global-high-scores", "up");
   assert.equal(leftEdge.accepted, false);
   assert.equal(leftEdge.reason, "edge-no-op");
 
-  const moveRight = moveDashboardTile(state, "clicker", "right");
+  const moveRight = moveDashboardTile(state, "racing", "right");
   assert.equal(moveRight.accepted, true);
-  assert.deepEqual(state.tileIds, ["racing", "color-match", "clicker"]);
+  assert.deepEqual(state.tileIds, ["global-high-scores", "clicker", "racing", "color-match"]);
+
+  const moveDown = moveDashboardTile(state, "global-high-scores", "down");
+  assert.equal(moveDown.accepted, true);
+  assert.deepEqual(state.tileIds, ["clicker", "global-high-scores", "racing", "color-match"]);
 
   const snapshot = getDashboardSnapshot(state);
-  assert.equal(snapshot.tileCount, 3);
+  assert.equal(snapshot.tileCount, 4);
   assert.equal(snapshot.availableCount, 1);
-  assert.equal(snapshot.tiles[1].id, "color-match");
+  assert.equal(snapshot.tiles[1].id, "global-high-scores");
   assert.equal(snapshot.tiles[1].position, 1);
   assert.equal(snapshot.tiles[1].score, 0);
+  assert.equal(snapshot.tiles[1].tileType, DASHBOARD_TILE_TYPE.STATS);
+  assert.equal(snapshot.tiles[2].tileType, DASHBOARD_TILE_TYPE.GAME);
 }
 
 function testUpdateTileScore() {

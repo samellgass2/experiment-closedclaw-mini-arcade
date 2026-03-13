@@ -55,6 +55,36 @@ Implemented robust dashboard tile layout persistence with versioned schema valid
 ## Task 383 Update (RUN_ID 683)
 Validated hardened dashboard routing, lifecycle management, and layout persistence together through a browser-driven end-to-end pass.
 
+## Task 431 Update (RUN_ID 764)
+Extended `js/persistence.js` with reusable global arcade metrics helpers that aggregate existing per-game storage data for dashboard stats widgets.
+
+### New Global Metrics API
+- `getGlobalHighScores(options?)`
+  - Returns `{ perGame, overall }`.
+  - `perGame` contains `{ gameId, gameName, highScore }` entries sorted by score.
+  - `overall` is the top entry or `null` when no persisted score data exists.
+- `getRecentPlays(limit?, options?)`
+  - Returns recent cross-game play records with `{ gameId, gameName, score, playedAt }`.
+  - `playedAt` is an ISO timestamp; records are sorted newest-first.
+- `getTotalAttempts(options?)`
+  - Returns a numeric sum of attempt counts across games.
+  - Attempts come from per-game summary counters when present, with history-length fallback.
+
+### Data Sources and Compatibility
+- Helpers are read-only aggregators over existing localStorage persistence payloads:
+  - Scalar best-value keys already written by games (for example: anomaly/clicker/color-match best score keys and racing best-lap key).
+  - Optional per-game summary/history JSON payloads when present.
+- No game save logic changes were required to expose these metrics.
+- Defensive parsing and storage guards ensure malformed or missing payloads are ignored safely.
+
+### Verification (Task 431)
+- Added `tests/persistence.metrics.test.mjs` covering:
+  - empty storage defaults (`[]`, `null`, `0`)
+  - scalar + summary high-score aggregation
+  - recent-play ordering across games
+  - attempt totals from summary counters/history lengths
+  - malformed JSON safety behavior
+
 ### Validation Scope and Method
 - Served app as static site via:
   - `python3 -m http.server 8000`
@@ -1780,3 +1810,282 @@ Verdict: PASS
 - Routing is centralized and hash-route resilient.
 - Loop lifecycle is single-active and teardown-safe across route transitions.
 - Layout persistence is versioned, resilient to corruption/storage failure, and falls back cleanly.
+
+## Task 432 - Global High Scores Stats Tile
+
+- Added a dedicated dashboard stats tile component at `js/dashboard/highScoresTile.js` that uses shared persistence helper `getGlobalHighScores(...)` and renders inside the same tile chrome classes used by game tiles (`dashboard-tile`, `tile-heading-row`, `tile-title`, `tile-position`, and `tile-score`).
+- Integrated the tile into the dashboard layout configuration by introducing a fixed tile id (`global-high-scores`) in `js/game.js` and adding it to the persisted/known tile order. The default order is now `global-high-scores`, `racing`, `clicker`.
+- The widget lists each game with recorded data and its best score, capped to a readable list size (top 6). If no game has stored scores, it renders an explicit empty state message: "No high scores yet. Play a game to generate stats."
+- Added dashboard route refresh behavior (`component.refreshMetrics()`) in `js/game.js` so when gameplay ends and the user returns to the dashboard, the high scores tile re-reads persistence-backed global metrics and shows updated best scores without a full page reload.
+- Added focused styles in `css/styles.css` for stats rows/empty state while preserving existing responsive tile/grid behavior for small and large viewports.
+
+## Task 433 - Recent Plays and Total Attempts Stats Tile
+
+- Added a new dashboard stats widget at `js/dashboard/recentPlaysAttemptsTile.js` with tile id `recent-plays-attempts`. The tile uses the same chrome/layout classes and slot integration as `global-high-scores` (`dashboard-tile`, `tile-heading-row`, `tile-title`, `tile-position`, `tile-score`) so it behaves like any other draggable board tile.
+- The widget is backed by shared persistence helpers in `js/persistence.js`:
+  - `getRecentPlays(limit, options)` for cross-game recent activity rows.
+  - `getTotalAttempts(options)` for aggregate attempt count across all games.
+- Default recent-play list size is **5** (`DASHBOARD_RECENT_PLAYS_LIMIT` in `js/game.js`, passed through `recentPlaysListLimit`; tile fallback constant is `DEFAULT_MAX_RECENT_ITEMS = 5`).
+- Rendering behavior:
+  - Shows the N most recent plays with game name and a human-friendly relative timestamp (`just now`, `x minutes ago`, `x hours ago`, etc.), with an absolute timestamp in the `<time>` title.
+  - Shows a clearly labeled `Total Attempts` metric and number formatting using `en-US` separators.
+- Empty-state behavior:
+  - No recent history: `No recent plays yet. Finish a game session to populate activity.`
+  - Zero attempts: `No attempts recorded yet.`
+- Dashboard integration updates:
+  - Exported the new tile module from `js/dashboard/index.js`.
+  - Updated `js/dashboard/component.js` to render the new stats tile type and treat **all** `isStatsTile` entries as non-playable/score-immutable.
+  - Added the tile to the dashboard catalog/default layout in `js/game.js`; default order now starts with `global-high-scores`, `recent-plays-attempts`, `racing`, `clicker`.
+- Reactive refresh behavior is preserved through existing dashboard route handling (`component.refreshMetrics()` in `js/game.js`): after playing games and returning to `#dashboard`, both recent plays and total attempts are re-read from persistence and displayed with current values.
+
+## Task 434 - Stats Tiles as First-Class Persistent Layout Items
+
+- Updated the dashboard tile model to carry explicit tile type metadata (`tileType: "game" | "stats"`) in `js/dashboard/logic.js` while preserving a single `tileIds` ordering list and one shared grid renderer in `js/dashboard/component.js`.
+- Stats widgets are now represented in layout snapshots the same way as game tiles (same position/order model, same draggable list, same directional move API), but still render widget-specific content (`global-high-scores` and `recent-plays-attempts`) through their dedicated components.
+- Added stats-tile reordering controls in both widget components:
+  - `js/dashboard/highScoresTile.js`
+  - `js/dashboard/recentPlaysAttemptsTile.js`
+  These now emit the same directional actions used by game tiles (`move-left`, `move-right`, `move-up`, `move-down`).
+- Extended directional move handling so `moveDashboardTile(...)` accepts `up`/`down` in addition to `left`/`right` (`js/dashboard/logic.js`), ensuring consistent behavior for all tile types in the unified ordering model.
+- Layout persistence remains localStorage-backed and cross-session:
+  - `js/persistence.js` now persists `tileOrder` plus typed `tiles` entries (`{ id, tileType }`) under the same schema/storage key (`miniArcade.dashboard.layout.v1`).
+  - `js/game.js` now passes known tile type mappings and saves both ordered ids and typed tile metadata on dashboard changes.
+  - Loading remains backward-compatible with legacy `tileOrder` payloads and can also recover order from typed `tiles` payloads.
+- Regression validation:
+  - Existing game tiles still render, reorder, and persist as before.
+  - Added/updated tests:
+    - `tests/dashboard.logic.test.mjs` (stats tile typing + up/down directional move coverage)
+    - `tests/persistence.layout.test.mjs` (typed tiles persistence and load fallback/compatibility)
+  - Full suite pass: `node --test tests/*.mjs`.
+
+## Tester Report (Workflow #44, 2026-03-12 UTC)
+
+### Tests Run
+- Command: `node --version && node --test tests/*.mjs`
+- Node: `v22.22.1`
+- Result: PASS
+  - `# tests 10`
+  - `# pass 10`
+  - `# fail 0`
+  - `# duration_ms 793.400692`
+
+### Acceptance Verification
+- Task #431 (Extend persistence with global arcade metrics): PASS
+  - Verified `getGlobalHighScores(options?)`, `getRecentPlays(limit?, options?)`, and `getTotalAttempts(options?)` are exported from `js/persistence.js`.
+  - Verified metrics derive from existing scalar/summary/history storage keys with defensive malformed-data handling and sensible empty defaults.
+  - Verified API return-shape documentation comments are present in code.
+  - Verified `STATUS.md` includes task entry and explicitly states no game save-logic changes were required.
+- Task #432 (Implement global high scores stats tile): PASS
+  - Verified dedicated stats tile component exists (`js/dashboard/highScoresTile.js`) and uses dashboard tile chrome classes.
+  - Verified empty state rendering and per-game score list behavior.
+  - Verified dashboard integration in shared grid/layout (`js/game.js`, `js/dashboard/component.js`) and reactive refresh path (`component.refreshMetrics()` on dashboard route).
+  - Verified responsive tile/grid CSS exists for small and large viewports (`css/styles.css`).
+- Task #433 (Implement recent plays and total attempts tile): PASS
+  - Verified dedicated combined stats tile exists (`js/dashboard/recentPlaysAttemptsTile.js`) with shared tile chrome and grid integration.
+  - Verified rendering of recent plays (game name + relative/absolute time), total attempts metric, and empty states.
+  - Verified default recent-play count is configured and documented (`DASHBOARD_RECENT_PLAYS_LIMIT = 5` in `js/game.js`; fallback constant in tile module).
+  - Verified reactive refresh path through dashboard route metric refresh.
+- Task #434 (Wire stats tiles into dashboard layout persistence): PASS
+  - Verified layout model includes stats tiles as first-class typed entries (`tileType: "stats"`) in unified ordering/rendering pipeline.
+  - Verified directional move controls and handlers apply to stats tiles the same as game tiles.
+  - Verified localStorage persistence includes typed tile entries and remains backward-compatible (`js/persistence.js`, `js/game.js`).
+  - Verified regression coverage via layout/dashboard logic tests and full suite pass.
+
+### Bugs Filed
+- None.
+
+### Integration / Regression Verdict
+- Stats widgets, shared persistence metrics, and persisted dashboard layout operate as one cohesive feature in this branch.
+- Overall verdict: CLEAN
+
+## Tester Report (Workflow #44 Retest, 2026-03-12 UTC)
+
+### Tests Run and Results
+1. `cat package.json | sed -n '/"scripts"/,/}/p'`
+   - Result: `cat: package.json: No such file or directory` (no npm manifest/scripts in this repo)
+2. `node --version && node --test tests/*.mjs`
+   - Node: `v22.22.1`
+   - Result: PASS (`# tests 10`, `# pass 10`, `# fail 0`)
+
+### Per-Task Acceptance Verdict
+- Task #431: PASS
+  - `js/persistence.js` exports `getGlobalHighScores`, `getRecentPlays`, `getTotalAttempts`.
+  - Helpers aggregate from existing per-game scalar/summary/history localStorage shapes with defensive malformed-data handling and empty defaults.
+  - API return-shape comments are present above each helper.
+  - `STATUS.md` contains Task 431 update and notes no game save-logic changes required.
+- Task #432: PASS
+  - Dedicated high-scores stats tile exists at `js/dashboard/highScoresTile.js` and uses standard dashboard tile chrome classes.
+  - Non-empty and empty states are implemented.
+  - Tile is wired into dashboard catalog/layout and participates in unified grid rendering/reordering.
+  - Reactive refresh is wired via dashboard-route `component.refreshMetrics()` in `js/game.js`.
+- Task #433: PASS
+  - Combined recent-plays/total-attempts tile exists at `js/dashboard/recentPlaysAttemptsTile.js`.
+  - Displays recent plays with game name + relative/absolute time and total attempts from shared persistence helpers.
+  - Graceful empty states exist for both recent plays and attempts.
+  - Default recent-play count is 5 (`DASHBOARD_RECENT_PLAYS_LIMIT` in `js/game.js`; `DEFAULT_MAX_RECENT_ITEMS = 5` fallback).
+  - Reactive refresh path is present on dashboard navigation.
+- Task #434: PASS
+  - Stats tiles are first-class entries in catalog/default order and layout persistence (`global-high-scores`, `recent-plays-attempts`).
+  - Unified tile model supports both `tileType: "game"` and `tileType: "stats"` with shared move/reposition controls.
+  - Cross-session persistence remains localStorage-backed and tested for typed tile entries and compatibility fallback.
+  - Existing game tile behaviors remain covered by passing dashboard/layout tests.
+
+### Bugs Filed
+- None.
+
+### Integration Verdict
+- Overall verdict: CLEAN
+- The stats widgets, global metrics helpers, and persisted unified dashboard layout work together cohesively with no observed regressions.
+
+## Tester Report (Workflow #44 Verification, 2026-03-12 UTC)
+
+### Tests run and results
+1. `node --version && node --test tests/*.mjs`
+   - Node: `v22.22.1`
+   - Result: PASS (`# tests 10`, `# pass 10`, `# fail 0`)
+
+### Per-task acceptance verdict
+- Task #431: PASS
+  - Verified `js/persistence.js` exports `getGlobalHighScores()`, `getRecentPlays(limit)`, and `getTotalAttempts()`.
+  - Verified helpers derive metrics from existing per-game scalar/summary/history localStorage data, handle malformed/missing data defensively, and return safe empty defaults.
+  - Verified API return-shape comments are present in code.
+  - Verified `STATUS.md` documents the global metrics API and confirms no game save-logic changes were required.
+- Task #432: PASS
+  - Verified dedicated high-scores stats tile exists in `js/dashboard/highScoresTile.js` and uses shared tile chrome/grid classes.
+  - Verified populated and empty-state rendering behaviors.
+  - Verified dashboard integration and reactive refresh path through `component.refreshMetrics()` on dashboard route (`js/game.js`).
+  - Verified responsive grid/tile styles in `css/styles.css`.
+- Task #433: PASS
+  - Verified combined stats tile exists in `js/dashboard/recentPlaysAttemptsTile.js` and uses shared tile chrome/grid patterns.
+  - Verified recent plays list includes game name and timestamp (relative display with absolute title) and total attempts from shared persistence helpers.
+  - Verified empty states for both recent plays and attempts.
+  - Verified default recent-play count is documented/discoverable (`DASHBOARD_RECENT_PLAYS_LIMIT = 5`).
+  - Verified reactive metric refresh on return to dashboard.
+- Task #434: PASS
+  - Verified stats tiles are first-class in catalog/default layout and persisted layout model (`tileType: "stats"`) alongside game tiles.
+  - Verified move-left/right/up/down and drag/drop paths are unified and apply to stats tiles.
+  - Verified persisted layout save/load compatibility and regression coverage via passing `persistence.layout` and dashboard logic tests.
+
+### Bugs filed
+- None.
+
+### Overall verdict
+- CLEAN
+
+## Tester Report (Workflow #44 Verification, 2026-03-13 UTC)
+
+### Tests run and results
+1. `cat package.json | sed -n '/"scripts"/,/}/p'`
+   - Result: `cat: package.json: No such file or directory` (no npm manifest/scripts in this repository)
+2. `node --version && node --test tests/*.mjs`
+   - Node: `v22.22.1`
+   - Result: PASS (`# tests 10`, `# pass 10`, `# fail 0`, `# duration_ms 1246.936366`)
+
+### Per-task acceptance verdict
+- Task #431: PASS
+  - Verified `js/persistence.js` exports `getGlobalHighScores(options?)`, `getRecentPlays(limit, options?)`, and `getTotalAttempts(options?)`.
+  - Verified helpers derive aggregates from existing per-game scalar/summary/history localStorage data with defensive malformed/missing handling and safe empty defaults.
+  - Verified API return-shape comments are present above the global metrics helpers.
+  - Verified `STATUS.md` includes Task 431 documentation and confirms no game save-logic changes were required.
+- Task #432: PASS
+  - Verified dedicated high-scores stats tile exists at `js/dashboard/highScoresTile.js` and uses shared dashboard tile chrome/grid classes.
+  - Verified populated list rendering and explicit empty state (`No high scores yet. Play a game to generate stats.`).
+  - Verified dashboard integration as a first-class tile and reactive metric refresh path via `component.refreshMetrics()` on dashboard route in `js/game.js`.
+  - Verified responsive tile/grid CSS paths cover small and large viewports.
+- Task #433: PASS
+  - Verified combined recent-plays/total-attempts stats tile exists at `js/dashboard/recentPlaysAttemptsTile.js` and uses shared tile chrome/layout integration.
+  - Verified display of N recent plays with game name + timestamp (relative display + absolute title) and total attempts aggregate.
+  - Verified empty states for recent plays and attempts.
+  - Verified default recent-play count is discoverable/configured (`DASHBOARD_RECENT_PLAYS_LIMIT = 5` in `js/game.js`; fallback constant in tile module).
+  - Verified reactive updates on return to dashboard via shared metrics refresh path.
+- Task #434: PASS
+  - Verified stats tiles are first-class layout entries in catalog/default order (`global-high-scores`, `recent-plays-attempts`) and persisted model.
+  - Verified unified move/reposition behavior (`left/right/up/down` + drag/drop) applies equally to stats and game tiles.
+  - Verified cross-session persistence remains localStorage-backed with typed tile entries and compatibility handling in `js/persistence.js`.
+  - Verified no regression in existing game tile layout behaviors via passing dashboard/layout tests.
+
+### Bugs filed
+- None.
+
+### Integration/regression verdict
+- Overall verdict: CLEAN
+- Global metrics helpers, stats widgets, and persisted unified layout work cohesively with no observed regressions in this verification run.
+
+## QA Validation Report (Workflow #44, 2026-03-13 UTC)
+
+### Commits Reviewed (`main..HEAD`)
+- `cd5c097` task/431: add global arcade persistence metrics helpers
+- `e6124d1` task/432: add global high scores dashboard tile
+- `098bc5f` task/432: update task report
+- `30b9b62` task/433: add recent plays and attempts stats tile
+- `03d46aa` task/433: update task report summary
+- `5f1ed08` task/434: persist typed stats tiles in dashboard layout
+- `8d0e069` task/434: update run summary report
+- `2e8edaf` bugfix: recent plays & total attempts tile not updating from clicker gameplay
+- `d67ef1e` task/435: supervisor safety-commit (Codex omitted git commit)
+- `9fc7ab7` task/435: supervisor safety-commit (Codex omitted git commit)
+- `b85cfcc` task/435: supervisor safety-commit (Codex omitted git commit)
+- `19fb8c2` task/435: supervisor safety-commit (Codex omitted git commit)
+
+### Validation Commands and Output
+1. `git log --oneline main..HEAD`
+   - Output:
+     - `19fb8c2 task/435: supervisor safety-commit (Codex omitted git commit)`
+     - `b85cfcc task/435: supervisor safety-commit (Codex omitted git commit)`
+     - `9fc7ab7 task/435: supervisor safety-commit (Codex omitted git commit)`
+     - `d67ef1e task/435: supervisor safety-commit (Codex omitted git commit)`
+     - `2e8edaf bugfix: recent plays & total attempts tile not updating from clicker gameplay`
+     - `8d0e069 task/434: update run summary report`
+     - `5f1ed08 task/434: persist typed stats tiles in dashboard layout`
+     - `03d46aa task/433: update task report summary`
+     - `30b9b62 task/433: add recent plays and attempts stats tile`
+     - `098bc5f task/432: update task report`
+     - `e6124d1 task/432: add global high scores dashboard tile`
+     - `cd5c097 task/431: add global arcade persistence metrics helpers`
+2. `git diff main...HEAD --stat`
+   - Output:
+     - `16 files changed, 1419 insertions(+), 58 deletions(-)`
+3. `cat package.json | grep -A 40 '"scripts"'`
+   - Output:
+     - `cat: package.json: No such file or directory`
+4. `node --version && node --test tests/*.mjs`
+   - Output:
+     - `v22.22.1`
+     - `# tests 10`
+     - `# pass 10`
+     - `# fail 0`
+     - `# skipped 0`
+     - `# duration_ms 796.499057`
+
+### Test Results
+- `node --test tests/*.mjs`: PASS
+- No failing tests.
+
+### Per-Task Acceptance Verdict
+- Extend persistence with global arcade metrics: PASS
+  - `getGlobalHighScores`, `getRecentPlays`, `getTotalAttempts` exported from `js/persistence.js`.
+  - Aggregation derives from existing scalar/summary/history localStorage records and handles empty/malformed data safely.
+  - API return-shape comments are present.
+  - Prior workflow status entries document API and save-logic expectations.
+- Implement global high scores stats tile: PASS
+  - Dedicated tile implemented (`js/dashboard/highScoresTile.js`) and integrated into dashboard grid with shared tile chrome/reorder controls.
+  - Correct populated/empty states are rendered.
+  - Reactive updates are wired via dashboard refresh (`component.refreshMetrics()`) when returning to dashboard.
+  - Responsive grid/tile styling remains intact.
+- Implement recent plays and total attempts tile: PASS
+  - Dedicated combined tile implemented (`js/dashboard/recentPlaysAttemptsTile.js`) using shared tile chrome/reorder controls.
+  - Shows recent plays with game name + relative/absolute timestamp and aggregate total attempts.
+  - Empty states are implemented for no history/no attempts.
+  - Default recent-play count is 5 (`DASHBOARD_RECENT_PLAYS_LIMIT`).
+  - Reactive refresh path is present on dashboard navigation.
+- Wire stats tiles into dashboard layout persistence: PASS
+  - Layout includes stats tile IDs by default and persists via unified typed tile model (`tileType: stats|game`).
+  - Reordering behavior is shared for stats/game tiles (buttons + drag/drop).
+  - Persisted order reloads from localStorage.
+  - Existing game-tile behavior remains covered by passing dashboard/layout tests.
+
+### Workflow Goal Verdict
+- Workflow #44 goal met: stats widgets for global high scores, recent plays, and total attempts are integrated as non-game dashboard tiles, consume the shared persistence layer, use the same tile chrome/reorder system, and update when gameplay data changes.
+
+### Overall Verdict
+- PASS

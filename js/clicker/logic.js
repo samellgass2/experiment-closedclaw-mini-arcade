@@ -16,12 +16,111 @@ export const CLICKER_DEFAULTS = {
   bestScoreStorageKey: "clicker-best-score"
 };
 
+const CLICKER_SUMMARY_STORAGE_KEYS = ["miniArcade.clicker.summary.v1", "clicker-summary"];
+const CLICKER_HISTORY_STORAGE_KEYS = ["miniArcade.clicker.history.v1", "clicker-history"];
+
 function sanitizeNumber(value, fallback, min = Number.NEGATIVE_INFINITY) {
   if (!Number.isFinite(value)) {
     return fallback;
   }
 
   return Math.max(min, value);
+}
+
+function readJsonFromKeys(storage, keys, expectedType) {
+  if (!storage || typeof storage.getItem !== "function") {
+    return null;
+  }
+
+  for (const key of keys) {
+    if (typeof key !== "string" || key.length === 0) {
+      continue;
+    }
+
+    try {
+      const raw = storage.getItem(key);
+      if (typeof raw !== "string" || raw.trim().length === 0) {
+        continue;
+      }
+
+      const parsed = JSON.parse(raw);
+      if (expectedType === "array" && Array.isArray(parsed)) {
+        return parsed;
+      }
+      if (expectedType === "object" && parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch (_error) {
+      // Ignore malformed payloads and continue searching fallback keys.
+    }
+  }
+
+  return null;
+}
+
+function writeJsonToKeys(storage, keys, value) {
+  if (!storage || typeof storage.setItem !== "function") {
+    return;
+  }
+
+  const payload = JSON.stringify(value);
+  for (const key of keys) {
+    if (typeof key !== "string" || key.length === 0) {
+      continue;
+    }
+
+    try {
+      storage.setItem(key, payload);
+    } catch (_error) {
+      // Ignore storage write failures to avoid breaking game flow.
+    }
+  }
+}
+
+function toNonNegativeInteger(value, fallback = 0) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return Math.max(0, Math.floor(fallback));
+  }
+
+  return Math.max(0, Math.floor(parsed));
+}
+
+function persistClickerSessionMetrics(state, reason) {
+  const storage = state.storage;
+  if (!storage || typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
+    return;
+  }
+
+  const playedAt = new Date().toISOString();
+  const existingSummary = readJsonFromKeys(storage, CLICKER_SUMMARY_STORAGE_KEYS, "object");
+  const existingHistory = readJsonFromKeys(storage, CLICKER_HISTORY_STORAGE_KEYS, "array");
+
+  const attemptsFromSummary = Math.max(
+    toNonNegativeInteger(existingSummary?.totalAttempts, 0),
+    toNonNegativeInteger(existingSummary?.attempts, 0)
+  );
+  const bestFromSummary = toNonNegativeInteger(existingSummary?.bestScore, 0);
+
+  const summary = {
+    totalAttempts: attemptsFromSummary + 1,
+    attempts: attemptsFromSummary + 1,
+    bestScore: Math.max(bestFromSummary, toNonNegativeInteger(state.bestScore, 0), toNonNegativeInteger(state.score, 0)),
+    lastScore: toNonNegativeInteger(state.score, 0),
+    lastPlayedAt: playedAt
+  };
+
+  const history = Array.isArray(existingHistory) ? [...existingHistory] : [];
+  history.push({
+    score: toNonNegativeInteger(state.score, 0),
+    playedAt,
+    totalClicks: toNonNegativeInteger(state.totalClicks, 0),
+    highestCombo: toNonNegativeInteger(state.highestCombo, 0),
+    reason
+  });
+
+  writeJsonToKeys(storage, CLICKER_SUMMARY_STORAGE_KEYS, summary);
+  writeJsonToKeys(storage, CLICKER_HISTORY_STORAGE_KEYS, history);
 }
 
 export function createClickerConfig(overrides = {}) {
@@ -99,6 +198,8 @@ function toOverState(state, endedAtMs, reason) {
     state.bestScore = state.score;
     writeScore(state.storage, state.config.bestScoreStorageKey, state.bestScore);
   }
+
+  persistClickerSessionMetrics(state, reason);
 }
 
 export function resetClickerState(state) {

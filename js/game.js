@@ -1,4 +1,6 @@
 import { createDashboardComponent, DASHBOARD_DEFAULT_CATALOG } from "./dashboard/index.js";
+import { HIGH_SCORES_TILE_ID } from "./dashboard/highScoresTile.js";
+import { RECENT_PLAYS_ATTEMPTS_TILE_ID } from "./dashboard/recentPlaysAttemptsTile.js";
 import { mountRuntimeForGame } from "./gameRuntimes.js";
 import { getActiveGameLoop, startGameLoop, stopActiveGameLoop } from "./gameLoopManager.js";
 import { createGameView } from "./gameView.js";
@@ -11,6 +13,7 @@ const DEV_MODE =
     window.location?.hostname === "127.0.0.1" ||
     window.location?.hostname === "" ||
     window.location?.protocol === "file:");
+const DASHBOARD_RECENT_PLAYS_LIMIT = 5;
 
 function devLifecycleLog(message, details) {
   if (!DEV_MODE) {
@@ -37,12 +40,38 @@ function initializeDashboard() {
     throw new Error("Missing required app view root elements.");
   }
 
-  const catalogById = new Map(DASHBOARD_DEFAULT_CATALOG.map((game) => [game.id, game]));
-  const knownTileIds = DASHBOARD_DEFAULT_CATALOG.map((game) => game.id);
-  const defaultTileOrder = ["racing", "clicker"];
+  const dashboardCatalog = [
+    {
+      id: HIGH_SCORES_TILE_ID,
+      name: "Global High Scores",
+      description: "Cross-game leaderboard based on stored best scores.",
+      difficulty: "All Modes",
+      mode: "Stats",
+      tileType: "stats",
+      isStatsTile: true
+    },
+    {
+      id: RECENT_PLAYS_ATTEMPTS_TILE_ID,
+      name: "Recent Plays & Attempts",
+      description: "Latest arcade sessions and total attempts across all games.",
+      difficulty: "All Modes",
+      mode: "Stats",
+      tileType: "stats",
+      isStatsTile: true
+    },
+    ...DASHBOARD_DEFAULT_CATALOG
+  ];
+
+  const catalogById = new Map(dashboardCatalog.map((game) => [game.id, game]));
+  const knownTileIds = dashboardCatalog.map((game) => game.id);
+  const knownTileTypes = new Map(
+    dashboardCatalog.map((tile) => [tile.id, tile.tileType === "stats" || tile.isStatsTile ? "stats" : "game"])
+  );
+  const defaultTileOrder = [HIGH_SCORES_TILE_ID, RECENT_PLAYS_ATTEMPTS_TILE_ID, "racing", "clicker"];
   const initialTileIds = loadLayout({
     defaultTileOrder,
-    knownTileIds
+    knownTileIds,
+    knownTileTypes
   });
   let lastPersistedTileIds = [...initialTileIds];
 
@@ -62,10 +91,15 @@ function initializeDashboard() {
 
     saveLayout(
       {
-        tileOrder: nextTileIds
+        tileOrder: nextTileIds,
+        tiles: snapshot.tiles.map((tile) => ({
+          id: tile.id,
+          tileType: tile.tileType
+        }))
       },
       {
-        knownTileIds
+        knownTileIds,
+        knownTileTypes
       }
     );
     lastPersistedTileIds = [...nextTileIds];
@@ -73,9 +107,10 @@ function initializeDashboard() {
 
   const component = createDashboardComponent({
     root: dashboardRoot,
-    catalog: DASHBOARD_DEFAULT_CATALOG,
+    catalog: dashboardCatalog,
     initialTileIds,
-    maxTiles: DASHBOARD_DEFAULT_CATALOG.length,
+    maxTiles: dashboardCatalog.length,
+    recentPlaysListLimit: DASHBOARD_RECENT_PLAYS_LIMIT,
     onChange: (snapshot) => persistLayoutFromSnapshot(snapshot),
     onPlayTile: (gameId) => navigateToGame(gameId)
   });
@@ -108,6 +143,7 @@ function initializeDashboard() {
       if (route.view === "dashboard") {
         gameHost.unmountActiveGame();
         stopActiveGameLoop("navigated-dashboard");
+        component.refreshMetrics();
 
         const active = getActiveGameLoop();
         if (DEV_MODE && active) {
@@ -130,6 +166,7 @@ function initializeDashboard() {
   window.__MINI_ARCADE_DASHBOARD__ = {
     getSnapshot: component.getSnapshot,
     setGameScore: component.setGameScore,
+    refreshMetrics: component.refreshMetrics,
     resetLayout: () => {
       resetLayout();
       lastPersistedTileIds = [];

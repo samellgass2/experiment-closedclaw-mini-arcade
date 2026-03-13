@@ -1,4 +1,5 @@
 import {
+  DASHBOARD_TILE_TYPE,
   DASHBOARD_STATUS,
   addDashboardTile,
   createDashboardState,
@@ -9,6 +10,11 @@ import {
   updateDashboardTileScore
 } from "./logic.js";
 import { createGameTileElement, updateGameTileElementScore } from "./gameTile.js";
+import { createHighScoresTileElement, HIGH_SCORES_TILE_ID } from "./highScoresTile.js";
+import {
+  createRecentPlaysAttemptsTileElement,
+  RECENT_PLAYS_ATTEMPTS_TILE_ID
+} from "./recentPlaysAttemptsTile.js";
 
 const FEEDBACK_LIMIT = 4;
 const FEEDBACK_RESET_MS = 780;
@@ -203,6 +209,11 @@ export function createDashboardComponent(options = {}) {
     }
   }
 
+  function isStatsTile(tileId) {
+    const game = state.catalogById.get(tileId);
+    return game?.tileType === DASHBOARD_TILE_TYPE.STATS;
+  }
+
   function render() {
     const snapshot = getDashboardSnapshot(state);
     updateStatusBanner(ui.status, snapshot);
@@ -218,7 +229,24 @@ export function createDashboardComponent(options = {}) {
 
     ui.tileList.append(createDropSlot(0));
     for (const tile of snapshot.tiles) {
-      ui.tileList.append(createGameTileElement(tile, tile.position, snapshot.tileCount));
+      let tileElement = null;
+      if (tile.tileType === DASHBOARD_TILE_TYPE.STATS) {
+        if (tile.id === HIGH_SCORES_TILE_ID) {
+          tileElement = createHighScoresTileElement(tile, tile.position, snapshot.tileCount, {
+            maxItems: options.highScoresListLimit,
+            metricsOptions: options.metricsOptions
+          });
+        } else if (tile.id === RECENT_PLAYS_ATTEMPTS_TILE_ID) {
+          tileElement = createRecentPlaysAttemptsTileElement(tile, tile.position, snapshot.tileCount, {
+            maxItems: options.recentPlaysListLimit,
+            metricsOptions: options.metricsOptions
+          });
+        }
+      }
+      if (!tileElement) {
+        tileElement = createGameTileElement(tile, tile.position, snapshot.tileCount);
+      }
+      ui.tileList.append(tileElement);
       ui.tileList.append(createDropSlot(tile.position + 1));
     }
 
@@ -354,6 +382,9 @@ export function createDashboardComponent(options = {}) {
     const action = button.dataset.action;
     if (action === "play") {
       if (typeof options.onPlayTile === "function") {
+        if (isStatsTile(tileId)) {
+          return;
+        }
         options.onPlayTile(tileId);
       }
       return;
@@ -382,6 +413,24 @@ export function createDashboardComponent(options = {}) {
         boardFeedbackClass: "is-feedback-move",
         tileFeedbackClass: "is-feedback-moved"
       });
+      return;
+    }
+
+    if (action === "move-up") {
+      const result = moveDashboardTile(state, tileId, "up");
+      commitActionFeedback(result, {
+        boardFeedbackClass: "is-feedback-move",
+        tileFeedbackClass: "is-feedback-moved"
+      });
+      return;
+    }
+
+    if (action === "move-down") {
+      const result = moveDashboardTile(state, tileId, "down");
+      commitActionFeedback(result, {
+        boardFeedbackClass: "is-feedback-move",
+        tileFeedbackClass: "is-feedback-moved"
+      });
     }
   }
 
@@ -397,6 +446,10 @@ export function createDashboardComponent(options = {}) {
 
     const tileElement = target.closest(".dashboard-tile");
     if (!(tileElement instanceof HTMLElement) || !tileElement.dataset.tileId) {
+      return;
+    }
+
+    if (isStatsTile(tileElement.dataset.tileId)) {
       return;
     }
 
@@ -516,6 +569,10 @@ export function createDashboardComponent(options = {}) {
   }
 
   function setGameScore(tileId, score) {
+    if (isStatsTile(tileId)) {
+      return { accepted: false, reason: "stats-tile-score-immutable" };
+    }
+
     const result = updateDashboardTileScore(state, tileId, score);
     const snapshot = getDashboardSnapshot(state);
     updateStatusBanner(ui.status, snapshot);
@@ -559,6 +616,7 @@ export function createDashboardComponent(options = {}) {
   return {
     state,
     render,
+    refreshMetrics: () => render(),
     getSnapshot: () => getDashboardSnapshot(state),
     setGameScore
   };
