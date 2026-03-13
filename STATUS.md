@@ -2010,3 +2010,82 @@ Verdict: PASS
 ### Integration/regression verdict
 - Overall verdict: CLEAN
 - Global metrics helpers, stats widgets, and persisted unified layout work cohesively with no observed regressions in this verification run.
+
+## QA Validation Report (Workflow #44, 2026-03-13 UTC)
+
+### Commits Reviewed (`main..HEAD`)
+- `cd5c097` task/431: add global arcade persistence metrics helpers
+- `e6124d1` task/432: add global high scores dashboard tile
+- `098bc5f` task/432: update task report
+- `30b9b62` task/433: add recent plays and attempts stats tile
+- `03d46aa` task/433: update task report summary
+- `5f1ed08` task/434: persist typed stats tiles in dashboard layout
+- `8d0e069` task/434: update run summary report
+- `2e8edaf` bugfix: recent plays & total attempts tile not updating from clicker gameplay
+- `d67ef1e` task/435: supervisor safety-commit (Codex omitted git commit)
+- `9fc7ab7` task/435: supervisor safety-commit (Codex omitted git commit)
+- `b85cfcc` task/435: supervisor safety-commit (Codex omitted git commit)
+- `19fb8c2` task/435: supervisor safety-commit (Codex omitted git commit)
+
+### Validation Commands and Output
+1. `git log --oneline main..HEAD`
+   - Output:
+     - `19fb8c2 task/435: supervisor safety-commit (Codex omitted git commit)`
+     - `b85cfcc task/435: supervisor safety-commit (Codex omitted git commit)`
+     - `9fc7ab7 task/435: supervisor safety-commit (Codex omitted git commit)`
+     - `d67ef1e task/435: supervisor safety-commit (Codex omitted git commit)`
+     - `2e8edaf bugfix: recent plays & total attempts tile not updating from clicker gameplay`
+     - `8d0e069 task/434: update run summary report`
+     - `5f1ed08 task/434: persist typed stats tiles in dashboard layout`
+     - `03d46aa task/433: update task report summary`
+     - `30b9b62 task/433: add recent plays and attempts stats tile`
+     - `098bc5f task/432: update task report`
+     - `e6124d1 task/432: add global high scores dashboard tile`
+     - `cd5c097 task/431: add global arcade persistence metrics helpers`
+2. `git diff main...HEAD --stat`
+   - Output:
+     - `16 files changed, 1419 insertions(+), 58 deletions(-)`
+3. `cat package.json | grep -A 40 '"scripts"'`
+   - Output:
+     - `cat: package.json: No such file or directory`
+4. `node --version && node --test tests/*.mjs`
+   - Output:
+     - `v22.22.1`
+     - `# tests 10`
+     - `# pass 10`
+     - `# fail 0`
+     - `# skipped 0`
+     - `# duration_ms 796.499057`
+
+### Test Results
+- `node --test tests/*.mjs`: PASS
+- No failing tests.
+
+### Per-Task Acceptance Verdict
+- Extend persistence with global arcade metrics: PASS
+  - `getGlobalHighScores`, `getRecentPlays`, `getTotalAttempts` exported from `js/persistence.js`.
+  - Aggregation derives from existing scalar/summary/history localStorage records and handles empty/malformed data safely.
+  - API return-shape comments are present.
+  - Prior workflow status entries document API and save-logic expectations.
+- Implement global high scores stats tile: PASS
+  - Dedicated tile implemented (`js/dashboard/highScoresTile.js`) and integrated into dashboard grid with shared tile chrome/reorder controls.
+  - Correct populated/empty states are rendered.
+  - Reactive updates are wired via dashboard refresh (`component.refreshMetrics()`) when returning to dashboard.
+  - Responsive grid/tile styling remains intact.
+- Implement recent plays and total attempts tile: PASS
+  - Dedicated combined tile implemented (`js/dashboard/recentPlaysAttemptsTile.js`) using shared tile chrome/reorder controls.
+  - Shows recent plays with game name + relative/absolute timestamp and aggregate total attempts.
+  - Empty states are implemented for no history/no attempts.
+  - Default recent-play count is 5 (`DASHBOARD_RECENT_PLAYS_LIMIT`).
+  - Reactive refresh path is present on dashboard navigation.
+- Wire stats tiles into dashboard layout persistence: PASS
+  - Layout includes stats tile IDs by default and persists via unified typed tile model (`tileType: stats|game`).
+  - Reordering behavior is shared for stats/game tiles (buttons + drag/drop).
+  - Persisted order reloads from localStorage.
+  - Existing game-tile behavior remains covered by passing dashboard/layout tests.
+
+### Workflow Goal Verdict
+- Workflow #44 goal met: stats widgets for global high scores, recent plays, and total attempts are integrated as non-game dashboard tiles, consume the shared persistence layer, use the same tile chrome/reorder system, and update when gameplay data changes.
+
+### Overall Verdict
+- PASS
